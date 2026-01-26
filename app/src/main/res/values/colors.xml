@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="primary">#FF6B35</color>
+    <color name="primary_variant">#E55A2B</color>
+    <color name="primary_light">#FF8A5C</color>
+    <color name="on_primary">#FFFFFF</color>
+    
+    <!-- Secondary Colors -->
+    <color name="secondary">#4ECDC4</color>
+    <color name="secondary_variant">#3DB9B1</color>
+    <color name="on_secondary">#FFFFFF</color>
+    
+    <!-- Tertiary Colors -->
+    <color name="tertiary">#FFE66D</color>
+    <color name="tertiary_variant">#E6CE5E</color>
+    <color name="on_tertiary">#1A1A1A</color>
+    
+    <!-- Background Colors -->
+    <color name="background">#FAFAFA</color>
+    <color name="on_background">#1A1A1A</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_surface">#1A1A1A</color>
+    <color name="surface_variant">#F0F0F0</color>
+    <color name="on_surface_variant">#666666</color>
+    
+    <!-- Error Colors -->
+    <color name="error">#E53935</color>
+    <color name="on_error">#FFFFFF</color>
+    <color name="error_container">#FFEBEE</color>
+    <color name="on_error_container">#B71C1C</color>
+    
+    <!-- Success Colors -->
+    <color name="success">#4CAF50</color>
+    <color name="on_success">#FFFFFF</color>
+    
+    <!-- Warning Colors -->
+    <color name="warning">#FF9800</color>
+    <color name="on_warning">#FFFFFF</color>
+    
+    <!-- Info Colors -->
+    <color name="info">#2196F3</color>
+    <color name="on_info">#FFFFFF</color>
+    
+    <!-- Outline -->
+    <color name="outline">#E0E0E0</color>
+    <color name="outline_variant">#BDBDBD</color>
+    
+    <!-- Chat Colors -->
+    <color name="chat_bubble_sent">#FF6B35</color>
+    <color name="chat_bubble_received">#F0F0F0</color>
+    <color name="chat_text_sent">#FFFFFF</color>
+    <color name="chat_text_received">#1A1A1A</color>
+    
+    <!-- Status Colors -->
+    <color name="online">#4CAF50</color>
+    <color name="offline">#9E9E9E</color>
+    <color name="typing">#4ECDC4</color>
+    
+    <!-- Call Colors -->
+    <color name="call_accept">#4CAF50</color>
+    <color name="call_decline">#E53935</color>
+    <color name="call_mute">#757575</color>
+    
+    <!-- Dark Theme Colors -->
+    <color name="dark_background">#121212</color>
+    <color name="dark_surface">#1E1E1E</color>
+    <color name="dark_surface_variant">#2D2D2D</color>
+    <color name="dark_on_background">#FFFFFF</color>
+    <color name="dark_on_surface">#FFFFFF</color>
+    <color name="dark_on_surface_variant">#B3B3B3</color>
+    
+    <!-- Gradient Colors -->
+    <color name="gradient_start">#1A1A2E</color>
+    <color name="gradient_middle">#16213E</color>
+    <color name="gradient_end">#0F3460</color>
+    
+    <!-- Avatar Colors -->
+    <color name="avatar_1">#FF6B35</color>
+    <color name="avatar_2">#4ECDC4</color>
+    <color name="avatar_3">#9C27B0</color>
+    <color name="avatar_4">#3F51B5</color>
+    <color name="avatar_5">#009688</color>
+    <color name="avatar_6">#FF5722</color>
+    <color name="avatar_7">#795548</color>
+    <color name="avatar_8">#607D8B</color>
+    
+    <!-- Attachment Button Colors -->
+    <color name="attachment_camera">#E91E63</color>
+    <color name="attachment_photo">#9C27B0</color>
+    <color name="attachment_video">#673AB7</color>
+    <color name="attachment_document">#3F51B5</color>
+    <color name="attachment_location">#4CAF50</color>
+    <color name="attachment_contact">#00BCD4</color>
+    
+    <!-- Ripple -->
+    <color name="ripple_light">#1A000000</color>
+    <color name="ripple_dark">#1AFFFFFF</color>
+    
+    <!-- Shimmer -->
+    <color name="shimmer_base">#E0E0E0</color>
+    <color name="shimmer_highlight">#F5F5F5</color>
+    
+    <!-- Transparent -->
+    <color name="transparent">#00000000</color>
+    <color name="semi_transparent_black">#80000000</color>
+    <color name="semi_transparent_white">#80FFFFFF</color>
+</resources>

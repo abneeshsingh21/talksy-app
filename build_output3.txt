@@ -1,0 +1,73 @@
+WARNING: The following problems were found when resolving the SDK location:
+Where: sdk.dir property in local.properties file. Problem: Directory does not exist
+
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+
+> Task :app:compileDebugKotlin
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomUserRepositoryImpl.kt:88:51 Unnecessary safe call on a non-null receiver of type List<UserDto>
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomUserRepositoryImpl.kt:88:73 Elvis operator (?:) always returns the left operand of non-nullable type List<User>
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:82:26 Parameter 'chatId' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:88:63 Elvis operator (?:) always returns the left operand of non-nullable type List<User>
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:115:32 Unnecessary safe call on a non-null receiver of type Chat
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:135:32 Unnecessary safe call on a non-null receiver of type Chat
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:151:48 Elvis operator (?:) always returns the left operand of non-nullable type List<User>
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:265:21 Parameter 'messageId' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:265:40 Parameter 'emoji' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:279:24 Parameter 'messageId' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:294:20 Parameter 'messageId' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:294:39 Parameter 'starred' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:309:24 Parameter 'messageId' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:309:43 Parameter 'targetConversationIds' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ConversationScreen.kt:421:5 Parameter 'onDismiss' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/components/PermissionDialog.kt:168:9 Variable 'context' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:45:81 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:64:77 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:81:77 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:98:77 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:106:36 Parameter 'enabled' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:126:77 Elvis operator (?:) always returns the left operand of non-nullable type String
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:140:24 Parameter 'currentPassword' is never used
+w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:140:49 Parameter 'newPassword' is never used
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomChatRepositoryImpl.kt:423:32 Unresolved reference: addReaction
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomChatRepositoryImpl.kt:437:32 Unresolved reference: removeReaction
+
+> Task :app:compileDebugKotlin FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.9/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 32s
+17 actionable tasks: 2 executed, 15 up-to-date

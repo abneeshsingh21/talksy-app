@@ -1,0 +1,76 @@
+WARNING: The following problems were found when resolving the SDK location:
+Where: sdk.dir property in local.properties file. Problem: Directory does not exist
+
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+
+> Task :app:compileDebugKotlin
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/remote/JengaChatApi.kt:116:5 Conflicting overloads: public abstract suspend fun addReaction(messageId: String, request: Map<String, String>): Response<ApiResponse> defined in com.jengachat.data.remote.JengaChatApi, public abstract suspend fun addReaction(messageId: String, request: Map<String, String>): Response<ApiResponse> defined in com.jengachat.data.remote.JengaChatApi
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/remote/JengaChatApi.kt:122:5 Conflicting overloads: public abstract suspend fun removeReaction(messageId: String): Response<ApiResponse> defined in com.jengachat.data.remote.JengaChatApi, public abstract suspend fun removeReaction(messageId: String): Response<ApiResponse> defined in com.jengachat.data.remote.JengaChatApi
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/remote/JengaChatApi.kt:170:5 Conflicting overloads: public abstract suspend fun addReaction(messageId: String, request: Map<String, String>): Response<ApiResponse> defined in com.jengachat.data.remote.JengaChatApi, public abstract suspend fun addReaction(messageId: String, request: Map<String, String>): Response<ApiResponse> defined in com.jengachat.data.remote.JengaChatApi
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/remote/JengaChatApi.kt:176:5 Conflicting overloads: public abstract suspend fun removeReaction(messageId: String): Response<ApiResponse> defined in com.jengachat.data.remote.JengaChatApi, public abstract suspend fun removeReaction(messageId: String): Response<ApiResponse> defined in com.jengachat.data.remote.JengaChatApi
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/remote/JengaChatApi.kt:180:78 Unresolved reference: ReactionsResponse
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/remote/JengaChatApi.kt:209:24 Unresolved reference: ForwardMessageRequest
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/remote/JengaChatApi.kt:210:17 Unresolved reference: ForwardResponse
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatListScreen.kt:212:58 Type mismatch: inferred type is Map<String, Boolean> but Boolean was expected
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatListScreen.kt:213:57 Type mismatch: inferred type is Unit but Boolean was expected
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatListScreen.kt:213:59 Unresolved reference: !
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatListScreen.kt:328:22 Unresolved reference: isOnline
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatListScreen.kt:464:34 Unresolved reference: isTyping
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatListScreen.kt:475:73 Unresolved reference: isRead
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatListScreen.kt:481:66 Unresolved reference: isRead
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:268:74 No value passed for parameter 'emoji'
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:289:66 No value passed for parameter 'messageId'
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:312:51 Unresolved reference: toggleStar
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:313:24 One type argument expected. Use 'Success<*>' if you don't want to pass type arguments
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:335:51 Unresolved reference: forwardMessage
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:336:24 One type argument expected. Use 'Success<*>' if you don't want to pass type arguments
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ConversationScreen.kt:121:22 Unresolved reference: isOnline
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ConversationScreen.kt:569:33 Unresolved reference: VOICE
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ConversationScreen.kt:672:41 The integer literal does not conform to the expected type String
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/NewChatScreen.kt:161:21 Unresolved reference: HorizontalDivider
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/NewChatScreen.kt:183:21 Unresolved reference: HorizontalDivider
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/NewChatScreen.kt:211:21 Unresolved reference: HorizontalDivider
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileScreen.kt:265:29 Unresolved reference: HorizontalDivider
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:144:45 Unresolved reference: changePassword
+e: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:146:24 One type argument expected. Use 'Success<*>' if you don't want to pass type arguments
+
+> Task :app:compileDebugKotlin FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.9/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 12s
+17 actionable tasks: 2 executed, 15 up-to-date

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Sample backup rules file for the full-data backup mode.
+   See https://developer.android.com/guide/topics/data/autobackup
+   for more information.
+-->
+<full-backup-content>
+    <!-- Include data from SharedPreferences -->
+    <include domain="sharedpref" path="."/>
+    
+    <!-- Include databases -->
+    <include domain="database" path="."/>
+    
+    <!-- Exclude cache -->
+    <exclude domain="cache" path="."/>
+    
+    <!-- Exclude no-backup files -->
+    <exclude domain="file" path="no_backup/"/>
+</full-backup-content>
