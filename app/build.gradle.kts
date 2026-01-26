@@ -137,7 +137,7 @@ dependencies {
     implementation("com.airbnb.android:lottie-compose:6.1.0")
     
     // Firebase Cloud Messaging for Push Notifications
-    implementation(platform("com.google.firebase:firebase-bom:34.8.0"))
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
     implementation("com.google.firebase:firebase-messaging-ktx")
     
     // Testing

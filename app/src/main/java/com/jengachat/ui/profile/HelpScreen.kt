@@ -75,7 +75,7 @@ fun HelpScreen(
                             context.startActivity(intent)
                         }
                     )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     ContactItem(
                         icon = Icons.Outlined.BugReport,
                         title = "Report a Bug",
@@ -86,9 +86,9 @@ fun HelpScreen(
                             context.startActivity(intent)
                         }
                     )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     ContactItem(
-                        icon = Icons.Outlined.GitHub,
+                        icon = Icons.Outlined.Code,
                         title = "GitHub",
                         subtitle = "View source code",
                         onClick = {
@@ -122,22 +122,22 @@ fun HelpScreen(
                         question = "Is Talksy really end-to-end encrypted?",
                         answer = "Yes! Talksy uses state-of-the-art Signal Protocol for end-to-end encryption. Your messages, calls, and media are encrypted on your device and can only be read by the intended recipients."
                     )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     FaqItem(
                         question = "Can Talksy read my messages?",
                         answer = "No. Talksy cannot read your messages. The encryption keys are stored only on your device, not on our servers. We have zero access to your message content."
                     )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     FaqItem(
                         question = "How do voice and video calls work?",
                         answer = "Voice and video calls use WebRTC with end-to-end encryption. The call data is encrypted on your device and travels directly to the other party when possible."
                     )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     FaqItem(
                         question = "Is Talksy free?",
                         answer = "Yes! Talksy is 100% free and open source. There are no ads, no subscriptions, and no hidden costs. We believe privacy should be accessible to everyone."
                     )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     FaqItem(
                         question = "How do I find my friends?",
                         answer = "You can search for friends by their username or email address. You can also sync your contacts to find friends who are already on Talksy."

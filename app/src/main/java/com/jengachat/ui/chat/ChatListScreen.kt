@@ -57,7 +57,7 @@ fun ChatListScreen(
                 chat.participantDetails.values.firstOrNull()?.displayName ?: ""
             }
             displayName.contains(searchQuery, ignoreCase = true) ||
-            chat.lastMessage?.content?.contains(searchQuery, ignoreCase = true) == true
+            chat.lastMessage?.text?.contains(searchQuery, ignoreCase = true) == true
         }
     }
     
@@ -197,102 +197,103 @@ fun ChatListScreen(
                         }
                     } else if (filteredChats.isEmpty()) {
                         // Premium empty state
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(48.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                            modifier = Modifier.size(120.dp)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(48.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.ChatBubbleOutline,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .padding(32.dp)
-                                    .fillMaxSize(),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        Text(
-                            text = "Start a Conversation",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        Text(
-                            text = "Your messages are end-to-end encrypted.\nTap the + button to start chatting securely.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 15.sp,
-                            lineHeight = 22.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        FilledTonalButton(
-                            onClick = onNewChatClick,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.height(52.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("New Conversation", fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 8.dp)
-                    ) {
-                        // Pinned chats section
-                        val currentUid = viewModel.currentUserId ?: ""
-                        val pinnedChats = filteredChats.filter { it.isPinned[currentUid] == true }
-                        val regularChats = filteredChats.filter { it.isPinned[currentUid] != true }
-                        
-                        if (pinnedChats.isNotEmpty()) {
-                            item {
-                                SectionHeader("Pinned")
-                            }
-                            items(pinnedChats, key = { it.id }) { chat ->
-                                PremiumChatItem(
-                                    chat = chat,
-                                    currentUserId = viewModel.currentUserId ?: "",
-                                    onClick = { onChatClick(chat.id) },
-                                    isPinned = true
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                modifier = Modifier.size(120.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ChatBubbleOutline,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .padding(32.dp)
+                                        .fillMaxSize(),
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
+                            
+                            Spacer(modifier = Modifier.height(32.dp))
+                            
+                            Text(
+                                text = "Start a Conversation",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            Text(
+                                text = "Your messages are end-to-end encrypted.\nTap the + button to start chatting securely.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 15.sp,
+                                lineHeight = 22.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            
+                            Spacer(modifier = Modifier.height(32.dp))
+                            
+                            FilledTonalButton(
+                                onClick = onNewChatClick,
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.height(52.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("New Conversation", fontWeight = FontWeight.SemiBold)
+                            }
                         }
-                        
-                        if (regularChats.isNotEmpty()) {
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(vertical = 8.dp)
+                        ) {
+                            // Pinned chats section
+                            val currentUid = viewModel.currentUserId ?: ""
+                            val pinnedChats = filteredChats.filter { it.isPinned[currentUid] == true }
+                            val regularChats = filteredChats.filter { it.isPinned[currentUid] != true }
+                            
                             if (pinnedChats.isNotEmpty()) {
                                 item {
-                                    SectionHeader("All Chats")
+                                    SectionHeader("Pinned")
+                                }
+                                items(pinnedChats, key = { it.id }) { chat ->
+                                    PremiumChatItem(
+                                        chat = chat,
+                                        currentUserId = viewModel.currentUserId ?: "",
+                                        onClick = { onChatClick(chat.id) },
+                                        isPinned = true
+                                    )
                                 }
                             }
-                            items(regularChats, key = { it.id }) { chat ->
-                                PremiumChatItem(
-                                    chat = chat,
-                                    currentUserId = viewModel.currentUserId ?: "",
-                                    onClick = { onChatClick(chat.id) },
-                                    isPinned = false
-                                )
+                            
+                            if (regularChats.isNotEmpty()) {
+                                if (pinnedChats.isNotEmpty()) {
+                                    item {
+                                        SectionHeader("All Chats")
+                                    }
+                                }
+                                items(regularChats, key = { it.id }) { chat ->
+                                    PremiumChatItem(
+                                        chat = chat,
+                                        currentUserId = viewModel.currentUserId ?: "",
+                                        onClick = { onChatClick(chat.id) },
+                                        isPinned = false
+                                    )
+                                }
                             }
-                        }
-                        
-                        // Bottom padding for FAB
-                        item {
-                            Spacer(modifier = Modifier.height(88.dp))
+                            
+                            // Bottom padding for FAB
+                            item {
+                                Spacer(modifier = Modifier.height(88.dp))
+                            }
                         }
                     }
                 }
