@@ -6,11 +6,14 @@ import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
 import okhttp3.*
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.ConcurrentLinkedQueue
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.min
 
 /**
- * WebSocket client for real-time messaging
+ * High-performance WebSocket client for real-time messaging
+ * Optimized for WhatsApp-like instant delivery
  */
 @Singleton
 class WebSocketClient @Inject constructor(
@@ -20,6 +23,10 @@ class WebSocketClient @Inject constructor(
     private var isConnected = false
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var reconnectJob: Job? = null
+    private var reconnectAttempts = 0
+    
+    // Message queue for offline messages
+    private val pendingMessages = ConcurrentLinkedQueue<PendingMessage>()
     
     private val json = Json {
         ignoreUnknownKeys = true
@@ -47,10 +54,20 @@ class WebSocketClient @Inject constructor(
 
     private val _readReceipts = MutableSharedFlow<ReadReceiptEvent>(replay = 0, extraBufferCapacity = 100)
     val readReceipts: SharedFlow<ReadReceiptEvent> = _readReceipts.asSharedFlow()
+    
+    // Message acknowledgements for tracking delivery status
+    private val _messageAcks = MutableSharedFlow<MessageAck>(replay = 0, extraBufferCapacity = 100)
+    val messageAcks: SharedFlow<MessageAck> = _messageAcks.asSharedFlow()
+    
+    // Delivery receipts (when recipient receives message)
+    private val _deliveryReceipts = MutableSharedFlow<DeliveryReceiptEvent>(replay = 0, extraBufferCapacity = 100)
+    val deliveryReceipts: SharedFlow<DeliveryReceiptEvent> = _deliveryReceipts.asSharedFlow()
 
+    // Optimized client with faster ping interval for quicker dead connection detection
     private val client = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS) // No timeout for WebSocket
-        .pingInterval(30, TimeUnit.SECONDS)
+        .pingInterval(15, TimeUnit.SECONDS)    // Faster ping for quick dead connection detection (was 30s)
+        .connectTimeout(10, TimeUnit.SECONDS)  // Quick connect timeout
         .build()
 
     fun connect() {
@@ -70,8 +87,12 @@ class WebSocketClient @Inject constructor(
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 isConnected = true
+                reconnectAttempts = 0  // Reset on successful connection
                 _connectionState.value = ConnectionState.Connected
                 reconnectJob?.cancel()
+                
+                // Flush any pending messages that were queued while offline
+                flushPendingMessages()
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -101,17 +122,44 @@ class WebSocketClient @Inject constructor(
         webSocket?.close(1000, "User disconnected")
         webSocket = null
         isConnected = false
+        reconnectAttempts = 0
         _connectionState.value = ConnectionState.Disconnected
     }
 
+    /**
+     * Faster reconnection with exponential backoff
+     * Starts at 1 second, doubles each time, max 30 seconds
+     */
     private fun scheduleReconnect() {
         if (tokenManager.accessToken == null) return
         
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
-            delay(5000) // Wait 5 seconds before reconnecting
+            // Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
+            val delayMs = min(1000L * (1 shl reconnectAttempts), 30000L)
+            reconnectAttempts++
+            
+            delay(delayMs)
             if (!isConnected && tokenManager.accessToken != null) {
                 connect()
+            }
+        }
+    }
+    
+    /**
+     * Flush pending messages after reconnection
+     */
+    private fun flushPendingMessages() {
+        scope.launch {
+            while (pendingMessages.isNotEmpty()) {
+                val pending = pendingMessages.poll() ?: break
+                if (isConnected) {
+                    sendMessageInternal(pending)
+                } else {
+                    // Put back if disconnected again
+                    pendingMessages.offer(pending)
+                    break
+                }
             }
         }
     }
@@ -130,6 +178,13 @@ class WebSocketClient @Inject constructor(
                     data?.let { 
                         val msg = parseMessage(it)
                         scope.launch { _messages.emit(msg) }
+                    }
+                }
+                "message_ack" -> {
+                    // Server acknowledged our message
+                    data?.let {
+                        val ack = parseMessageAck(it)
+                        scope.launch { _messageAcks.emit(ack) }
                     }
                 }
                 "typing" -> {
@@ -157,7 +212,11 @@ class WebSocketClient @Inject constructor(
                     }
                 }
                 "delivered" -> {
-                    // Handle delivery receipt
+                    // Handle delivery receipt - recipient received the message
+                    data?.let {
+                        val event = parseDeliveryReceipt(it)
+                        scope.launch { _deliveryReceipts.emit(event) }
+                    }
                 }
                 "pong" -> {
                     // Heartbeat response
@@ -184,6 +243,15 @@ class WebSocketClient @Inject constructor(
             timestamp = data["timestamp"]?.jsonPrimitive?.contentOrNull ?: ""
         )
     }
+    
+    private fun parseMessageAck(data: JsonObject): MessageAck {
+        return MessageAck(
+            localMessageId = data["localMessageId"]?.jsonPrimitive?.contentOrNull ?: "",
+            serverMessageId = data["serverMessageId"]?.jsonPrimitive?.contentOrNull ?: "",
+            status = data["status"]?.jsonPrimitive?.contentOrNull ?: "sent",
+            timestamp = data["timestamp"]?.jsonPrimitive?.contentOrNull ?: ""
+        )
+    }
 
     private fun parseTypingEvent(data: JsonObject): TypingEvent {
         return TypingEvent(
@@ -204,8 +272,12 @@ class WebSocketClient @Inject constructor(
     private fun parseCallSignal(data: JsonObject): CallSignalEvent {
         return CallSignalEvent(
             callId = data["callId"]?.jsonPrimitive?.contentOrNull ?: "",
+            conversationId = data["conversationId"]?.jsonPrimitive?.contentOrNull,
             senderId = data["senderId"]?.jsonPrimitive?.contentOrNull ?: "",
+            senderName = data["senderName"]?.jsonPrimitive?.contentOrNull,
+            senderAvatar = data["senderAvatar"]?.jsonPrimitive?.contentOrNull,
             signalType = data["signalType"]?.jsonPrimitive?.contentOrNull ?: "",
+            callType = data["callType"]?.jsonPrimitive?.contentOrNull,
             encryptedPayload = data["encryptedPayload"]?.jsonPrimitive?.contentOrNull ?: "",
             timestamp = data["timestamp"]?.jsonPrimitive?.contentOrNull ?: ""
         )
@@ -219,23 +291,57 @@ class WebSocketClient @Inject constructor(
             readAt = data["readAt"]?.jsonPrimitive?.contentOrNull ?: ""
         )
     }
+    
+    private fun parseDeliveryReceipt(data: JsonObject): DeliveryReceiptEvent {
+        return DeliveryReceiptEvent(
+            conversationId = data["conversationId"]?.jsonPrimitive?.contentOrNull ?: "",
+            messageIds = data["messageIds"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+            deliveredTo = data["deliveredTo"]?.jsonPrimitive?.contentOrNull ?: "",
+            deliveredAt = data["deliveredAt"]?.jsonPrimitive?.contentOrNull ?: ""
+        )
+    }
 
     // Send methods
 
-    fun sendMessage(conversationId: String, encryptedContent: String, messageType: String = "text", messageId: String? = null) {
+    /**
+     * Send message with queuing support for offline scenarios
+     * Returns true if sent immediately, false if queued
+     */
+    fun sendMessage(conversationId: String, encryptedContent: String, messageType: String = "text", localMessageId: String? = null): Boolean {
+        val pending = PendingMessage(
+            localMessageId = localMessageId ?: System.currentTimeMillis().toString(),
+            conversationId = conversationId,
+            encryptedContent = encryptedContent,
+            messageType = messageType,
+            timestamp = System.currentTimeMillis()
+        )
+        
+        return if (isConnected) {
+            sendMessageInternal(pending)
+            true
+        } else {
+            // Queue for later when reconnected
+            pendingMessages.offer(pending)
+            false
+        }
+    }
+    
+    private fun sendMessageInternal(pending: PendingMessage) {
         val payload = buildJsonObject {
             put("type", "message")
             putJsonObject("data") {
-                put("conversationId", conversationId)
-                put("encryptedContent", encryptedContent)
-                put("messageType", messageType)
-                messageId?.let { put("messageId", it) }
+                put("conversationId", pending.conversationId)
+                put("encryptedContent", pending.encryptedContent)
+                put("messageType", pending.messageType)
+                put("localMessageId", pending.localMessageId)
             }
         }
         webSocket?.send(payload.toString())
     }
 
     fun sendTyping(conversationId: String, isTyping: Boolean) {
+        if (!isConnected) return
+        
         val payload = buildJsonObject {
             put("type", "typing")
             putJsonObject("data") {
@@ -247,8 +353,28 @@ class WebSocketClient @Inject constructor(
     }
 
     fun sendReadReceipt(conversationId: String, messageIds: List<String>) {
+        if (!isConnected) return
+        
         val payload = buildJsonObject {
             put("type", "read")
+            putJsonObject("data") {
+                put("conversationId", conversationId)
+                putJsonArray("messageIds") {
+                    messageIds.forEach { add(it) }
+                }
+            }
+        }
+        webSocket?.send(payload.toString())
+    }
+    
+    /**
+     * Send delivery confirmation when message is received
+     */
+    fun sendDeliveredReceipt(conversationId: String, messageIds: List<String>) {
+        if (!isConnected) return
+        
+        val payload = buildJsonObject {
+            put("type", "delivered")
             putJsonObject("data") {
                 put("conversationId", conversationId)
                 putJsonArray("messageIds") {
@@ -276,7 +402,42 @@ class WebSocketClient @Inject constructor(
         val payload = buildJsonObject { put("type", "ping") }
         webSocket?.send(payload.toString())
     }
+    
+    /**
+     * Check if there are pending messages in queue
+     */
+    fun hasPendingMessages(): Boolean = pendingMessages.isNotEmpty()
+    
+    /**
+     * Get count of pending messages
+     */
+    fun getPendingMessageCount(): Int = pendingMessages.size
 }
+
+// Pending message for offline queue
+data class PendingMessage(
+    val localMessageId: String,
+    val conversationId: String,
+    val encryptedContent: String,
+    val messageType: String,
+    val timestamp: Long
+)
+
+// Message acknowledgement from server
+data class MessageAck(
+    val localMessageId: String,
+    val serverMessageId: String,
+    val status: String,  // "sent", "stored", "error"
+    val timestamp: String
+)
+
+// Delivery receipt event
+data class DeliveryReceiptEvent(
+    val conversationId: String,
+    val messageIds: List<String>,
+    val deliveredTo: String,
+    val deliveredAt: String
+)
 
 // Event classes
 sealed class ConnectionState {
@@ -311,8 +472,12 @@ data class PresenceEvent(
 
 data class CallSignalEvent(
     val callId: String,
+    val conversationId: String?,
     val senderId: String,
+    val senderName: String?,
+    val senderAvatar: String?,
     val signalType: String,
+    val callType: String?,
     val encryptedPayload: String,
     val timestamp: String
 )

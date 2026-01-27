@@ -5,12 +5,14 @@ package com.jengachat.data.model
  */
 data class Message(
     val id: String = "",
+    val localId: String = "",  // Local ID for optimistic updates before server confirms
     val chatId: String = "",
     val senderId: String = "",
     val senderName: String = "",
     val senderPhotoUrl: String = "",
     val text: String = "",
     val type: MessageType = MessageType.TEXT,
+    val status: MessageStatus = MessageStatus.SENT,  // For tracking delivery state
     val mediaUrl: String = "",
     val mediaThumbnailUrl: String = "",
     val mediaName: String = "",

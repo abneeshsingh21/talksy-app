@@ -121,16 +121,29 @@ fun AppNavigation(
             arguments = listOf(navArgument("chatId") { type = NavType.StringType })
         ) { backStackEntry ->
             val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+            val callViewModel: CallViewModel = hiltViewModel()
+            
             ConversationScreen(
                 chatId = chatId,
                 onBackClick = { navController.popBackStack() },
                 onGroupInfoClick = { navController.navigate(Screen.GroupInfo.createRoute(chatId)) },
-                onVoiceCallClick = {
-                    // Create call and navigate
-                    navController.navigate(Screen.VoiceCall.createRoute("temp_call_id"))
+                onVoiceCallClick = { conversationId ->
+                    // Initiate voice call via API
+                    callViewModel.initiateCallForConversation(
+                        conversationId = conversationId,
+                        callType = CallType.VOICE
+                    ) { callId ->
+                        navController.navigate(Screen.VoiceCall.createRoute(callId))
+                    }
                 },
-                onVideoCallClick = {
-                    navController.navigate(Screen.VideoCall.createRoute("temp_call_id"))
+                onVideoCallClick = { conversationId ->
+                    // Initiate video call via API
+                    callViewModel.initiateCallForConversation(
+                        conversationId = conversationId,
+                        callType = CallType.VIDEO
+                    ) { callId ->
+                        navController.navigate(Screen.VideoCall.createRoute(callId))
+                    }
                 }
             )
         }

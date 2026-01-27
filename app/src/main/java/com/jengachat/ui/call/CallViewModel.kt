@@ -90,6 +90,41 @@ class CallViewModel @Inject constructor(
         }
     }
     
+    /**
+     * Initiate a call for a conversation
+     * Uses the conversationId to create a call and notify participants
+     */
+    fun initiateCallForConversation(
+        conversationId: String,
+        callType: CallType,
+        onCallCreated: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            android.util.Log.d("CallViewModel", "📞 Initiating ${callType.name} call for conversation: $conversationId")
+            _callState.value = CallState.Initiating
+            
+            when (val result = callRepository.initiateCallForConversation(
+                conversationId = conversationId,
+                callType = callType
+            )) {
+                is Resource.Success -> {
+                    result.data?.let { call ->
+                        android.util.Log.d("CallViewModel", "📞 Call created successfully: ${call.id}")
+                        _currentCall.value = call
+                        _callState.value = CallState.Ringing
+                        onCallCreated(call.id)
+                        observeCall(call.id)
+                    }
+                }
+                is Resource.Error -> {
+                    android.util.Log.e("CallViewModel", "📞 Failed to initiate call: ${result.message}")
+                    _callState.value = CallState.Error(result.message ?: "Failed to initiate call")
+                }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+    
     fun initiateGroupCall(
         chatId: String,
         participantIds: List<String>,
@@ -146,9 +181,28 @@ class CallViewModel @Inject constructor(
         }
     }
     
-    private fun observeCall(callId: String) {
+    /**
+     * Start observing call state changes and incoming call info
+     * Should be called when navigating to call screen
+     */
+    fun observeCall(callId: String) {
         viewModelScope.launch {
+            android.util.Log.d("CallViewModel", "📞 Observing call: $callId")
+            
+            // Also check for incoming call data
+            launch {
+                callRepository.observeIncomingCalls().collect { incomingCall ->
+                    if (incomingCall != null && incomingCall.id == callId) {
+                        _currentCall.value = incomingCall
+                        _callState.value = CallState.Ringing
+                        android.util.Log.d("CallViewModel", "📞 Incoming call matched: ${incomingCall.callerName}")
+                    }
+                }
+            }
+            
+            // Observe call state changes from repository
             callRepository.observeCall(callId).collect { call ->
+                android.util.Log.d("CallViewModel", "📞 Call state update: ${call?.status}")
                 _currentCall.value = call
                 
                 when (call?.status) {

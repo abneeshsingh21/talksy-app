@@ -46,6 +46,74 @@ class CustomChatRepositoryImpl @Inject constructor(
                 handleTypingEvent(event)
             }
         }
+        
+        // Listen for message acknowledgements (server confirms message received)
+        scope.launch {
+            webSocketClient.messageAcks.collect { ack ->
+                handleMessageAck(ack)
+            }
+        }
+        
+        // Listen for delivery receipts (recipient received message)
+        scope.launch {
+            webSocketClient.deliveryReceipts.collect { event ->
+                handleDeliveryReceipt(event)
+            }
+        }
+        
+        // Listen for read receipts (recipient read message)
+        scope.launch {
+            webSocketClient.readReceipts.collect { event ->
+                handleReadReceiptEvent(event)
+            }
+        }
+    }
+    
+    /**
+     * Handle message acknowledgement from server
+     */
+    private fun handleMessageAck(ack: MessageAck) {
+        // Find and update the message with the server ID and SENT status
+        _messagesCache.values.forEach { cache ->
+            cache.value = cache.value.map { msg ->
+                if (msg.localId == ack.localMessageId || msg.id == ack.localMessageId) {
+                    msg.copy(
+                        id = ack.serverMessageId,
+                        status = MessageStatus.SENT
+                    )
+                } else msg
+            }
+        }
+    }
+    
+    /**
+     * Handle delivery receipt - recipient received the message
+     */
+    private fun handleDeliveryReceipt(event: DeliveryReceiptEvent) {
+        val cache = _messagesCache[event.conversationId] ?: return
+        cache.value = cache.value.map { msg ->
+            if (event.messageIds.contains(msg.id)) {
+                msg.copy(
+                    status = MessageStatus.DELIVERED,
+                    deliveredTo = msg.deliveredTo + event.deliveredTo
+                )
+            } else msg
+        }
+    }
+    
+    /**
+     * Handle read receipt event - recipient read the message
+     */
+    private fun handleReadReceiptEvent(event: ReadReceiptEvent) {
+        val cache = _messagesCache[event.conversationId] ?: return
+        cache.value = cache.value.map { msg ->
+            if (event.messageIds.contains(msg.id)) {
+                msg.copy(
+                    status = MessageStatus.READ,
+                    readBy = msg.readBy + event.readBy
+                )
+            } else msg
+        }
     }
 
     // ==================== Chat Operations ====================
@@ -267,6 +335,7 @@ class CustomChatRepositoryImpl @Inject constructor(
     ): Resource<Message> {
         return try {
             val currentUserId = tokenManager.userId ?: return Resource.Error("Not logged in")
+            val localMessageId = java.util.UUID.randomUUID().toString()
             
             // Get the other participant for E2EE
             val chat = _chats.value.find { it.id == chatId }
@@ -279,7 +348,48 @@ class CustomChatRepositoryImpl @Inject constructor(
                     cryptoManager.encryptMessage(text, sessionKey)
                 } else text
             } else text
-
+            
+            // ===== OPTIMISTIC UPDATE - Show message IMMEDIATELY =====
+            val pendingMessage = Message(
+                id = localMessageId,
+                localId = localMessageId,
+                chatId = chatId,
+                senderId = currentUserId,
+                senderName = "",
+                senderPhotoUrl = "",
+                text = text,
+                type = MessageType.TEXT,
+                status = MessageStatus.SENDING,  // Show as "sending" with clock icon
+                createdAt = System.currentTimeMillis(),
+                replyTo = replyTo?.let {
+                    ReplyMessage(
+                        messageId = it.id,
+                        senderId = it.senderId,
+                        senderName = it.senderName,
+                        text = it.text,
+                        type = it.type
+                    )
+                }
+            )
+            
+            // Update local cache immediately - user sees message instantly!
+            updateMessageCache(chatId, pendingMessage)
+            
+            // ===== WEBSOCKET-FIRST: Try fast path first =====
+            val wsConnected = webSocketClient.connectionState.value == ConnectionState.Connected
+            
+            if (wsConnected) {
+                // Fast path: Send via WebSocket (instant)
+                val sent = webSocketClient.sendMessage(chatId, encryptedText, "text", localMessageId)
+                
+                if (sent) {
+                    // Update status to SENT (single check mark)
+                    updateMessageStatus(chatId, localMessageId, MessageStatus.SENT)
+                    return Resource.Success(pendingMessage.copy(status = MessageStatus.SENT))
+                }
+            }
+            
+            // ===== FALLBACK: Use REST API if WebSocket unavailable =====
             val request = SendMessageRequest(
                 conversationId = chatId,
                 messageType = "text",
@@ -291,29 +401,48 @@ class CustomChatRepositoryImpl @Inject constructor(
 
             if (response.isSuccessful && response.body()?.success == true) {
                 val sentData = response.body()!!.data!!
-                val message = Message(
+                
+                // Update with server message ID and SENT status
+                updateMessageWithServerId(chatId, localMessageId, sentData.messageId)
+                updateMessageStatus(chatId, localMessageId, MessageStatus.SENT)
+                
+                val message = pendingMessage.copy(
                     id = sentData.messageId,
-                    chatId = sentData.conversationId,
-                    senderId = currentUserId,
-                    senderName = "",
-                    senderPhotoUrl = "",
-                    text = text, // Use original text for local cache
-                    type = MessageType.TEXT,
-                    createdAt = try { sentData.createdAt.toLong() } catch (e: Exception) { System.currentTimeMillis() }
+                    status = MessageStatus.SENT
                 )
-                
-                // Also send via WebSocket for real-time delivery
-                webSocketClient.sendMessage(chatId, encryptedText, "text", sentData.messageId)
-                
-                // Update local cache
-                updateMessageCache(chatId, message)
                 
                 Resource.Success(message)
             } else {
+                // Mark as failed
+                updateMessageStatus(chatId, localMessageId, MessageStatus.FAILED)
                 Resource.Error(response.body()?.error ?: "Failed to send message")
             }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Failed to send message")
+        }
+    }
+    
+    /**
+     * Update message status in cache (for optimistic updates)
+     */
+    private fun updateMessageStatus(chatId: String, messageId: String, status: MessageStatus) {
+        val cache = _messagesCache[chatId] ?: return
+        cache.value = cache.value.map { msg ->
+            if (msg.id == messageId || msg.localId == messageId) {
+                msg.copy(status = status)
+            } else msg
+        }
+    }
+    
+    /**
+     * Update message with server-assigned ID
+     */
+    private fun updateMessageWithServerId(chatId: String, localId: String, serverId: String) {
+        val cache = _messagesCache[chatId] ?: return
+        cache.value = cache.value.map { msg ->
+            if (msg.localId == localId) {
+                msg.copy(id = serverId)
+            } else msg
         }
     }
 

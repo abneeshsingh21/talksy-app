@@ -85,6 +85,34 @@ class CustomCallRepositoryImpl @Inject constructor(
             Resource.Error(e.message ?: "Failed to initiate call")
         }
     }
+    
+    override suspend fun initiateCallForConversation(
+        conversationId: String,
+        callType: CallType
+    ): Resource<Call> {
+        return try {
+            android.util.Log.d("CallRepository", "📞 initiateCallForConversation: $conversationId, type: ${callType.name}")
+            
+            val request = InitiateCallRequest(
+                conversationId = conversationId,
+                callType = if (callType == CallType.VIDEO) "video" else "voice"
+            )
+            val response = api.initiateCall(request)
+
+            if (response.isSuccessful && response.body()?.success == true) {
+                val call = response.body()!!.data!!.toCall()
+                android.util.Log.d("CallRepository", "📞 Call initiated successfully: ${call.id}")
+                _currentCall.value = call
+                Resource.Success(call)
+            } else {
+                android.util.Log.e("CallRepository", "📞 Failed to initiate call: ${response.body()?.error}")
+                Resource.Error(response.body()?.error ?: "Failed to initiate call")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CallRepository", "📞 Exception initiating call: ${e.message}")
+            Resource.Error(e.message ?: "Failed to initiate call")
+        }
+    }
 
     override suspend fun getCall(callId: String): Resource<Call> {
         return try {
@@ -341,20 +369,43 @@ class CustomCallRepositoryImpl @Inject constructor(
     // ==================== Helper Methods ====================
 
     private fun handleCallSignal(signal: CallSignalEvent) {
+        android.util.Log.d("CallRepository", "📞 Received call signal: ${signal.signalType} from ${signal.senderName ?: signal.senderId}")
+        
         when (signal.signalType) {
-            "offer" -> {
-                // Incoming call
+            "offer", "incoming_call" -> {
+                // Incoming call - parse call type from signal or payload
+                val callType = when {
+                    signal.callType == "video" -> CallType.VIDEO
+                    signal.callType == "voice" -> CallType.VOICE
+                    else -> {
+                        // Try parsing from encryptedPayload as fallback
+                        try {
+                            val json = kotlinx.serialization.json.Json.parseToJsonElement(signal.encryptedPayload)
+                            val typeStr = json.jsonObject["callType"]?.jsonPrimitive?.contentOrNull
+                            if (typeStr == "video") CallType.VIDEO else CallType.VOICE
+                        } catch (e: Exception) {
+                            CallType.VOICE
+                        }
+                    }
+                }
+                
                 val call = Call(
                     id = signal.callId,
-                    type = CallType.VOICE, // Default, will be updated with actual type
+                    type = callType,
                     status = CallStatus.RINGING,
                     callerId = signal.senderId,
+                    callerName = signal.senderName ?: "Unknown Caller",
+                    callerAvatar = signal.senderAvatar,
+                    conversationId = signal.conversationId,
                     isGroupCall = false
                 )
+                
+                android.util.Log.d("CallRepository", "📞 Incoming call from ${call.callerName} (${callType.name})")
                 _incomingCalls.value = call
             }
             "answer" -> {
-                // Call accepted
+                // Call accepted - update status to connecting
+                android.util.Log.d("CallRepository", "📞 Call answered by ${signal.senderId}")
                 _currentCall.update { call ->
                     call?.copy(status = CallStatus.CONNECTING)
                 }
@@ -363,7 +414,6 @@ class CustomCallRepositoryImpl @Inject constructor(
                 // ICE candidate received - parse from encryptedPayload
                 scope.launch {
                     try {
-                        // The payload is a JSON string, parse it
                         val payloadJson = kotlinx.serialization.json.Json.parseToJsonElement(signal.encryptedPayload)
                         val payloadObj = payloadJson.jsonObject
                         
@@ -384,17 +434,20 @@ class CustomCallRepositoryImpl @Inject constructor(
             }
             "hangup" -> {
                 // Call ended
+                android.util.Log.d("CallRepository", "📞 Call ended by ${signal.senderId}")
                 _currentCall.value = null
                 _incomingCalls.value = null
             }
             "reject" -> {
-                // Call rejected
+                // Call rejected by recipient
+                android.util.Log.d("CallRepository", "📞 Call rejected by ${signal.senderId}")
                 _currentCall.update { call ->
                     call?.copy(status = CallStatus.ENDED, endReason = CallEndReason.DECLINED)
                 }
             }
             "busy" -> {
                 // User busy
+                android.util.Log.d("CallRepository", "📞 User ${signal.senderId} is busy")
                 _currentCall.update { call ->
                     call?.copy(status = CallStatus.ENDED, endReason = CallEndReason.BUSY)
                 }

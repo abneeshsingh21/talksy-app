@@ -36,11 +36,11 @@ fun VoiceCallScreen(
     val isSpeakerOn by viewModel.isSpeakerOn.collectAsState()
     
     var callDuration by remember { mutableIntStateOf(0) }
+    var hasAnswered by remember { mutableStateOf(!isIncoming) }
     
+    // Only auto-answer if not an incoming call
     LaunchedEffect(callId) {
-        if (isIncoming) {
-            viewModel.answerCall(callId)
-        }
+        viewModel.observeCall(callId)
     }
     
     // Timer for call duration
@@ -50,6 +50,14 @@ fun VoiceCallScreen(
                 delay(1000)
                 callDuration++
             }
+        }
+    }
+    
+    // Handle call ended
+    LaunchedEffect(callState) {
+        if (callState is CallState.Ended) {
+            delay(2000) // Show "Call Ended" for 2 seconds
+            onEndCall()
         }
     }
     
@@ -76,15 +84,15 @@ fun VoiceCallScreen(
             
             // Caller Avatar with pulsing animation
             PulsingAvatar(
-                photoUrl = null,
-                isRinging = callState is CallState.Ringing || callState is CallState.Initiating
+                photoUrl = currentCall?.callerAvatar ?: currentCall?.callerPhotoUrl,
+                isRinging = !hasAnswered && isIncoming
             )
             
             Spacer(modifier = Modifier.height(24.dp))
             
             // Caller Name
             Text(
-                text = currentCall?.let { "Caller" } ?: "Unknown",
+                text = currentCall?.callerName ?: "Unknown Caller",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
@@ -94,14 +102,15 @@ fun VoiceCallScreen(
             
             // Call Status
             Text(
-                text = when (callState) {
-                    is CallState.Initiating -> "Calling..."
-                    is CallState.Ringing -> "Ringing..."
-                    is CallState.Connecting -> "Connecting..."
-                    is CallState.Connected -> formatDuration(callDuration)
-                    is CallState.OnHold -> "On Hold"
-                    is CallState.Reconnecting -> "Reconnecting..."
-                    is CallState.Ended -> "Call Ended"
+                text = when {
+                    !hasAnswered && isIncoming -> "Incoming Voice Call..."
+                    callState is CallState.Initiating -> "Calling..."
+                    callState is CallState.Ringing -> "Ringing..."
+                    callState is CallState.Connecting -> "Connecting..."
+                    callState is CallState.Connected -> formatDuration(callDuration)
+                    callState is CallState.OnHold -> "On Hold"
+                    callState is CallState.Reconnecting -> "Reconnecting..."
+                    callState is CallState.Ended -> "Call Ended"
                     else -> ""
                 },
                 fontSize = 16.sp,
@@ -110,8 +119,65 @@ fun VoiceCallScreen(
             
             Spacer(modifier = Modifier.weight(1f))
             
-            // Call Controls
-            if (callState !is CallState.Ended) {
+            // Show Answer/Decline buttons for incoming call that hasn't been answered
+            if (!hasAnswered && isIncoming) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    // Decline Button
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        FloatingActionButton(
+                            onClick = {
+                                viewModel.rejectCall(callId)
+                                onEndCall()
+                            },
+                            containerColor = Color.Red,
+                            contentColor = Color.White,
+                            modifier = Modifier.size(72.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.CallEnd,
+                                contentDescription = "Decline",
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Decline",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 14.sp
+                        )
+                    }
+                    
+                    // Answer Button
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        FloatingActionButton(
+                            onClick = {
+                                hasAnswered = true
+                                viewModel.answerCall(callId)
+                            },
+                            containerColor = Color(0xFF4CAF50),
+                            contentColor = Color.White,
+                            modifier = Modifier.size(72.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Call,
+                                contentDescription = "Answer",
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Answer",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+            // Call Controls (after answering or for outgoing calls)
+            else if (callState !is CallState.Ended) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -157,14 +223,11 @@ fun VoiceCallScreen(
                 }
             } else {
                 // Call Ended - Show return button
-                Button(
-                    onClick = onEndCall,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text("Return")
-                }
+                Text(
+                    text = "Call ended",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 18.sp
+                )
             }
             
             Spacer(modifier = Modifier.height(48.dp))

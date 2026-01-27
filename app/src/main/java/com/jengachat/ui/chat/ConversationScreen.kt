@@ -41,6 +41,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.jengachat.data.model.ChatType
 import com.jengachat.data.model.Message
+import com.jengachat.data.model.MessageStatus
 import com.jengachat.data.model.MessageType
 import java.text.SimpleDateFormat
 import java.util.*
@@ -54,8 +55,8 @@ private val QUICK_REACTIONS = listOf("❤️", "😂", "😮", "😢", "😠", "
 fun ConversationScreen(
     chatId: String,
     onBackClick: () -> Unit,
-    onVoiceCallClick: () -> Unit,
-    onVideoCallClick: () -> Unit,
+    onVoiceCallClick: (conversationId: String) -> Unit,
+    onVideoCallClick: (conversationId: String) -> Unit,
     onGroupInfoClick: () -> Unit,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
@@ -276,14 +277,14 @@ fun ConversationScreen(
                             }
                         },
                         actions = {
-                            IconButton(onClick = onVoiceCallClick) {
+                            IconButton(onClick = { onVoiceCallClick(chatId) }) {
                                 Icon(
                                     Icons.Outlined.Call,
                                     contentDescription = "Voice Call",
                                     tint = Color.White
                                 )
                             }
-                            IconButton(onClick = onVideoCallClick) {
+                            IconButton(onClick = { onVideoCallClick(chatId) }) {
                                 Icon(
                                     Icons.Outlined.Videocam,
                                     contentDescription = "Video Call",
@@ -694,21 +695,28 @@ fun SmartMessageBubble(
                     
                     if (isOwn) {
                         Spacer(modifier = Modifier.width(4.dp))
-                        val isRead = message.readBy.isNotEmpty()
-                        val isDelivered = message.deliveredTo.isNotEmpty()
+                        // Use MessageStatus for proper status display
                         Icon(
-                            imageVector = when {
-                                isRead -> Icons.Default.DoneAll
-                                isDelivered -> Icons.Default.DoneAll
-                                message.id.isNotEmpty() -> Icons.Default.Done
-                                else -> Icons.Default.Schedule
+                            imageVector = when (message.status) {
+                                MessageStatus.SENDING -> Icons.Default.Schedule  // Clock icon
+                                MessageStatus.SENT -> Icons.Default.Done         // Single check
+                                MessageStatus.DELIVERED -> Icons.Default.DoneAll // Double check (gray)
+                                MessageStatus.READ -> Icons.Default.DoneAll      // Double check (blue)
+                                MessageStatus.FAILED -> Icons.Default.ErrorOutline // Error icon
                             },
-                            contentDescription = null,
+                            contentDescription = when (message.status) {
+                                MessageStatus.SENDING -> "Sending"
+                                MessageStatus.SENT -> "Sent"
+                                MessageStatus.DELIVERED -> "Delivered"
+                                MessageStatus.READ -> "Read"
+                                MessageStatus.FAILED -> "Failed"
+                            },
                             modifier = Modifier.size(14.dp),
-                            tint = if (isRead) 
-                                Color(0xFF4FC3F7)
-                            else 
-                                textColor.copy(alpha = 0.7f)
+                            tint = when (message.status) {
+                                MessageStatus.READ -> Color(0xFF4FC3F7)  // Blue for read
+                                MessageStatus.FAILED -> Color(0xFFEF5350) // Red for failed
+                                else -> textColor.copy(alpha = 0.7f)
+                            }
                         )
                     }
                 }

@@ -16,6 +16,11 @@ interface CallRepository {
         isGroupCall: Boolean
     ): Resource<Call>
     
+    suspend fun initiateCallForConversation(
+        conversationId: String,
+        callType: CallType
+    ): Resource<Call>
+    
     suspend fun getCall(callId: String): Resource<Call>
     suspend fun updateCallStatus(callId: String, status: CallStatus): Resource<Unit>
     suspend fun endCall(callId: String, reason: CallEndReason): Resource<Unit>

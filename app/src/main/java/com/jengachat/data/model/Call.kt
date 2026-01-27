@@ -10,6 +10,8 @@ data class Call(
     val callerId: String = "",
     val callerName: String = "",
     val callerPhotoUrl: String = "",
+    val callerAvatar: String? = null,  // Avatar URL from WebSocket signal
+    val conversationId: String? = null,  // Associated conversation
     val participants: List<CallParticipant> = emptyList(),
     val chatId: String = "",  // Associated chat for group calls
     val isGroupCall: Boolean = false,
