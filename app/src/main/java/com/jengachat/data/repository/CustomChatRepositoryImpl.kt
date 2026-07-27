@@ -463,7 +463,9 @@ class CustomChatRepositoryImpl @Inject constructor(
             // 1. Encrypt caption using E2EE session key for conversation
             val encryptedCaption = if (!caption.isNullOrEmpty() && sessionManager.hasSession(chatId)) {
                 val sessionKey = sessionManager.getSessionKey(chatId)
-                if (sessionKey != null) cryptoManager.encrypt(caption, sessionKey) else caption
+                if (sessionKey != null) {
+                    cryptoManager.encryptMessage(caption, sessionKey)
+                } else caption
             } else {
                 caption ?: ""
             }
