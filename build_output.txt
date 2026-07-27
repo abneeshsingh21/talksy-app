@@ -1,6 +1,5 @@
-WARNING: The following problems were found when resolving the SDK location:
-Where: sdk.dir property in local.properties file. Problem: Directory does not exist
-
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.9/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
 > Task :app:preBuild UP-TO-DATE
 > Task :app:preDebugBuild UP-TO-DATE
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
@@ -20,6 +19,7 @@ Where: sdk.dir property in local.properties file. Problem: Directory does not ex
 > Task :app:processDebugManifest UP-TO-DATE
 > Task :app:processDebugManifestForPackage UP-TO-DATE
 > Task :app:processDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
 > Task :app:javaPreCompileDebug UP-TO-DATE
 > Task :app:mergeDebugShaders UP-TO-DATE
 > Task :app:compileDebugShaders NO-SOURCE
@@ -36,92 +36,4 @@ Where: sdk.dir property in local.properties file. Problem: Directory does not ex
 > Task :app:validateSigningDebug UP-TO-DATE
 > Task :app:writeDebugAppMetadata UP-TO-DATE
 > Task :app:writeDebugSigningConfigVersions UP-TO-DATE
-> Task :app:kspDebugKotlin
 > Task :app:compileDebugKotlin
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomCallRepositoryImpl.kt:278:28 Unnecessary safe call on a non-null receiver of type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomCallRepositoryImpl.kt:279:34 Unnecessary safe call on a non-null receiver of type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomCallRepositoryImpl.kt:280:31 Unnecessary safe call on a non-null receiver of type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomCallRepositoryImpl.kt:281:38 Unnecessary safe call on a non-null receiver of type Int
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomCallRepositoryImpl.kt:331:51 Unnecessary safe call on a non-null receiver of type List<CallDto>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomCallRepositoryImpl.kt:331:73 Elvis operator (?:) always returns the left operand of non-nullable type List<Call>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomChatRepositoryImpl.kt:253:51 Unnecessary safe call on a non-null receiver of type List<ConversationDto>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomChatRepositoryImpl.kt:253:73 Elvis operator (?:) always returns the left operand of non-nullable type List<Chat>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomChatRepositoryImpl.kt:468:54 Unnecessary safe call on a non-null receiver of type List<MessageDto>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomChatRepositoryImpl.kt:468:95 Elvis operator (?:) always returns the left operand of non-nullable type List<Message>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomChatRepositoryImpl.kt:511:54 Unnecessary safe call on a non-null receiver of type List<MessageDto>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomChatRepositoryImpl.kt:511:95 Elvis operator (?:) always returns the left operand of non-nullable type List<Message>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomUserRepositoryImpl.kt:88:51 Unnecessary safe call on a non-null receiver of type List<UserDto>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/data/repository/CustomUserRepositoryImpl.kt:88:73 Elvis operator (?:) always returns the left operand of non-nullable type List<User>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/service/CallService.kt:121:13 Variable 'callId' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/service/JengaChatMessagingService.kt:107:13 Variable 'senderId' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/service/NotificationService.kt:84:18 'catch(noinline suspend FlowCollector<T>.(cause: Throwable) -> Unit): Flow<T>' is deprecated. SharedFlow never completes, so this operator typically has not effect, it can only catch exceptions from 'onSubscribe' operator
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/service/NotificationService.kt:93:18 'catch(noinline suspend FlowCollector<T>.(cause: Throwable) -> Unit): Flow<T>' is deprecated. SharedFlow never completes, so this operator typically has not effect, it can only catch exceptions from 'onSubscribe' operator
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/auth/AuthViewModel.kt:46:71 Elvis operator (?:) always returns the left operand of non-nullable type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/auth/AuthViewModel.kt:81:71 Elvis operator (?:) always returns the left operand of non-nullable type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/auth/AuthViewModel.kt:112:71 Elvis operator (?:) always returns the left operand of non-nullable type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/auth/AuthViewModel.kt:137:71 Elvis operator (?:) always returns the left operand of non-nullable type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/auth/AuthViewModel.kt:155:71 Elvis operator (?:) always returns the left operand of non-nullable type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/call/CallViewModel.kt:54:54 Elvis operator (?:) always returns the left operand of non-nullable type List<Call>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/call/CallViewModel.kt:79:32 Unnecessary safe call on a non-null receiver of type Call
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/call/CallViewModel.kt:86:71 Elvis operator (?:) always returns the left operand of non-nullable type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/call/CallViewModel.kt:109:32 Unnecessary safe call on a non-null receiver of type Call
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/call/CallViewModel.kt:116:71 Elvis operator (?:) always returns the left operand of non-nullable type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/call/VideoCallScreen.kt:32:9 Variable 'currentCall' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/call/VideoCallScreen.kt:36:9 Variable 'isFrontCamera' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatListScreen.kt:55:32 Elvis operator (?:) always returns the left operand of non-nullable type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:82:26 Parameter 'chatId' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:88:63 Elvis operator (?:) always returns the left operand of non-nullable type List<User>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:111:42 Parameter 'mediaUri' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:152:32 Unnecessary safe call on a non-null receiver of type Chat
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:172:32 Unnecessary safe call on a non-null receiver of type Chat
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:188:48 Elvis operator (?:) always returns the left operand of non-nullable type List<User>
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:302:21 Parameter 'messageId' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:302:40 Parameter 'emoji' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:316:24 Parameter 'messageId' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:331:20 Parameter 'messageId' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:331:39 Parameter 'starred' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:346:24 Parameter 'messageId' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ChatViewModel.kt:346:43 Parameter 'targetConversationIds' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ConversationScreen.kt:109:9 Variable 'videoLauncher' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/chat/ConversationScreen.kt:485:5 Parameter 'onDismiss' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/components/CommonComponents.kt:203:5 Parameter 'onSendClick' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/components/PermissionDialog.kt:168:9 Variable 'context' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/navigation/AppNavigation.kt:229:33 Parameter 'receiverId' is never used, could be renamed to _
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:45:81 Elvis operator (?:) always returns the left operand of non-nullable type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:134:36 Parameter 'enabled' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:154:77 Elvis operator (?:) always returns the left operand of non-nullable type String
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:168:24 Parameter 'currentPassword' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/ui/profile/ProfileViewModel.kt:168:49 Parameter 'newPassword' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/util/Extensions.kt:23:9 Variable 'now' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/util/ImageUtils.kt:79:49 Parameter 'height' is never used
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/webrtc/RTCAudioManager.kt:55:41 'getter for isSpeakerphoneOn: Boolean' is deprecated. Deprecated in Java
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/webrtc/RTCAudioManager.kt:82:22 'setter for isSpeakerphoneOn: Boolean' is deprecated. Deprecated in Java
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/webrtc/RTCAudioManager.kt:144:22 'setter for isSpeakerphoneOn: Boolean' is deprecated. Deprecated in Java
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/webrtc/RTCAudioManager.kt:150:29 'getter for isSpeakerphoneOn: Boolean' is deprecated. Deprecated in Java
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/webrtc/RTCAudioManager.kt:167:30 'setter for isSpeakerphoneOn: Boolean' is deprecated. Deprecated in Java
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/webrtc/RTCAudioManager.kt:170:30 'setter for isSpeakerphoneOn: Boolean' is deprecated. Deprecated in Java
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/webrtc/RTCAudioManager.kt:173:30 'setter for isSpeakerphoneOn: Boolean' is deprecated. Deprecated in Java
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/webrtc/RTCAudioManager.kt:176:30 'setter for isSpeakerphoneOn: Boolean' is deprecated. Deprecated in Java
-w: file:///C:/Users/lenovo/Desktop/android%20app%20testing/JengaChat/app/src/main/java/com/jengachat/webrtc/RTCAudioManager.kt:177:30 'startBluetoothSco(): Unit' is deprecated. Deprecated in Java
-
-> Task :app:compileDebugJavaWithJavac
-> Task :app:hiltAggregateDepsDebug
-> Task :app:hiltJavaCompileDebug
-> Task :app:processDebugJavaRes
-> Task :app:transformDebugClassesWithAsm
-> Task :app:mergeDebugJavaResource
-> Task :app:dexBuilderDebug
-> Task :app:mergeDebugGlobalSynthetics
-> Task :app:mergeProjectDexDebug
-> Task :app:packageDebug
-> Task :app:createDebugApkListingFileRedirect
-> Task :app:assembleDebug
-
-Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
-
-You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
-
-For more on this, please refer to https://docs.gradle.org/8.9/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
-
-BUILD SUCCESSFUL in 1m 8s
-43 actionable tasks: 14 executed, 29 up-to-date

@@ -1,5 +1,10 @@
 package com.jengachat.ui.call
 
+import android.media.RingtoneManager
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -15,9 +20,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
@@ -26,56 +35,75 @@ import kotlinx.coroutines.delay
 fun VideoCallScreen(
     callId: String,
     isIncoming: Boolean = false,
+    callerName: String = "",
+    callerPhotoUrl: String = "",
     onEndCall: () -> Unit,
     viewModel: CallViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
     val currentCall by viewModel.currentCall.collectAsState()
     val callState by viewModel.callState.collectAsState()
     val isMuted by viewModel.isMuted.collectAsState()
     val isVideoEnabled by viewModel.isVideoEnabled.collectAsState()
     val isFrontCamera by viewModel.isFrontCamera.collectAsState()
-    
+
     var callDuration by remember { mutableIntStateOf(0) }
     var showControls by remember { mutableStateOf(true) }
     var hasAnswered by remember { mutableStateOf(!isIncoming) }
-    
-    // Load call info
-    LaunchedEffect(callId) {
-        viewModel.observeCall(callId)
+
+    // Resolve display name from nav args or server data
+    val displayName = remember(currentCall, callerName) {
+        currentCall?.callerName?.takeIf { it.isNotEmpty() }
+            ?: callerName.takeIf { it.isNotEmpty() }
+            ?: "Unknown Caller"
     }
-    
-    // Timer for call duration
+    val photoUrl = remember(currentCall, callerPhotoUrl) {
+        currentCall?.callerAvatar?.takeIf { it.isNotEmpty() }
+            ?: currentCall?.callerPhotoUrl?.takeIf { it.isNotEmpty() }
+            ?: callerPhotoUrl.takeIf { it.isNotEmpty() }
+    }
+
+    // Ringtone
+    val ringtone = remember {
+        if (isIncoming) {
+            try {
+                val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                RingtoneManager.getRingtone(context, uri)
+            } catch (e: Exception) { null }
+        } else null
+    }
+
+    LaunchedEffect(callId) { viewModel.observeCall(callId) }
+
+    LaunchedEffect(isIncoming, hasAnswered) {
+        if (isIncoming && !hasAnswered) ringtone?.play() else ringtone?.stop()
+    }
+    DisposableEffect(Unit) { onDispose { ringtone?.stop() } }
+
     LaunchedEffect(callState) {
         if (callState is CallState.Connected) {
-            while (true) {
-                delay(1000)
-                callDuration++
-            }
+            while (true) { delay(1000); callDuration++ }
         }
     }
-    
-    // Auto-hide controls
+
     LaunchedEffect(showControls) {
         if (showControls && callState is CallState.Connected && hasAnswered) {
-            delay(5000)
-            showControls = false
+            delay(5000); showControls = false
         }
     }
-    
-    // Handle call ended
+
     LaunchedEffect(callState) {
-        if (callState is CallState.Ended) {
-            delay(2000)
-            onEndCall()
-        }
+        if (callState is CallState.Ended) { ringtone?.stop(); delay(2000); onEndCall() }
     }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Remote Video (full screen placeholder)
+        // ========== REMOTE VIDEO (full screen) ==========
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -83,34 +111,50 @@ fun VideoCallScreen(
             contentAlignment = Alignment.Center
         ) {
             if (callState is CallState.Connected && hasAnswered) {
-                // Placeholder for remote video
-                Icon(
-                    Icons.Default.Videocam,
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp),
-                    tint = Color.White.copy(alpha = 0.3f)
-                )
-            } else {
-                // Show avatar while connecting or for incoming call
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
+                // Remote video placeholder — in production this would be WebRTC remote stream
+                // For now shows a dark gradient with their avatar centered
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
+                    if (!photoUrl.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = photoUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            alpha = 0.3f
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Surface(
+                            modifier = Modifier.size(100.dp),
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.1f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Videocam, null, Modifier.size(48.dp), Color.White.copy(0.5f))
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text("Video connecting...", color = Color.White.copy(0.5f), fontSize = 14.sp)
+                    }
+                }
+            } else {
+                // Waiting/ringing — show avatar
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     PulsingAvatar(
-                        photoUrl = currentCall?.callerAvatar ?: currentCall?.callerPhotoUrl,
+                        photoUrl = photoUrl,
                         isRinging = !hasAnswered && isIncoming
                     )
-                    
                     Spacer(modifier = Modifier.height(24.dp))
-                    
                     Text(
-                        text = currentCall?.callerName ?: "Unknown Caller",
+                        text = displayName,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
-                    
                     Spacer(modifier = Modifier.height(8.dp))
-                    
                     Text(
                         text = when {
                             !hasAnswered && isIncoming -> "Incoming Video Call..."
@@ -123,90 +167,75 @@ fun VideoCallScreen(
                         fontSize = 16.sp,
                         color = Color.White.copy(alpha = 0.7f)
                     )
-                    
+
                     // Answer/Decline buttons for incoming calls
                     if (!hasAnswered && isIncoming) {
                         Spacer(modifier = Modifier.height(48.dp))
-                        
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(64.dp)
-                        ) {
-                            // Decline Button
+                        Row(horizontalArrangement = Arrangement.spacedBy(64.dp)) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 FloatingActionButton(
-                                    onClick = {
-                                        viewModel.rejectCall(callId)
-                                        onEndCall()
-                                    },
-                                    containerColor = Color.Red,
-                                    contentColor = Color.White,
+                                    onClick = { ringtone?.stop(); viewModel.rejectCall(callId); onEndCall() },
+                                    containerColor = Color.Red, contentColor = Color.White,
                                     modifier = Modifier.size(72.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.CallEnd,
-                                        contentDescription = "Decline",
-                                        modifier = Modifier.size(36.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Decline",
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontSize = 14.sp
-                                )
+                                ) { Icon(Icons.Default.CallEnd, null, Modifier.size(36.dp)) }
+                                Spacer(Modifier.height(8.dp))
+                                Text("Decline", color = Color.White.copy(0.7f), fontSize = 14.sp)
                             }
-                            
-                            // Answer Button
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 FloatingActionButton(
-                                    onClick = {
-                                        hasAnswered = true
-                                        viewModel.answerCall(callId)
-                                    },
-                                    containerColor = Color(0xFF4CAF50),
-                                    contentColor = Color.White,
+                                    onClick = { ringtone?.stop(); hasAnswered = true; viewModel.answerCall(callId) },
+                                    containerColor = Color(0xFF4CAF50), contentColor = Color.White,
                                     modifier = Modifier.size(72.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Videocam,
-                                        contentDescription = "Answer with Video",
-                                        modifier = Modifier.size(36.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Answer",
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontSize = 14.sp
-                                )
+                                ) { Icon(Icons.Default.Videocam, null, Modifier.size(36.dp)) }
+                                Spacer(Modifier.height(8.dp))
+                                Text("Answer", color = Color.White.copy(0.7f), fontSize = 14.sp)
                             }
                         }
                     }
                 }
             }
         }
-        
-        // Local Video Preview (picture-in-picture)
-        if (isVideoEnabled && callState is CallState.Connected && hasAnswered) {
+
+        // ========== LOCAL CAMERA PREVIEW (Picture-in-Picture) ==========
+        if (isVideoEnabled && hasAnswered) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
                     .size(120.dp, 160.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF2A2A3E)),
-                contentAlignment = Alignment.Center
+                    .background(Color.Black)
             ) {
-                Icon(
-                    Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = Color.White.copy(alpha = 0.5f)
+                // Real CameraX preview
+                val previewView = remember { PreviewView(context) }
+                AndroidView(
+                    factory = { previewView },
+                    modifier = Modifier.fillMaxSize()
                 )
+                LaunchedEffect(isFrontCamera) {
+                    val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+                    cameraProviderFuture.addListener({
+                        val cameraProvider = cameraProviderFuture.get()
+                        val preview = Preview.Builder().build().also {
+                            it.setSurfaceProvider(previewView.surfaceProvider)
+                        }
+                        val cameraSelector = if (isFrontCamera) {
+                            CameraSelector.DEFAULT_FRONT_CAMERA
+                        } else {
+                            CameraSelector.DEFAULT_BACK_CAMERA
+                        }
+                        try {
+                            cameraProvider.unbindAll()
+                            cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
+                        } catch (e: Exception) {
+                            android.util.Log.e("VideoCall", "CameraX bind failed: ${e.message}")
+                        }
+                    }, ContextCompat.getMainExecutor(context))
+                }
             }
         }
-        
-        // Top Bar (only show after answering)
+
+        // ========== TOP BAR ==========
         if (hasAnswered || !isIncoming) {
             AnimatedVisibility(
                 visible = showControls || callState !is CallState.Connected,
@@ -224,12 +253,11 @@ fun VideoCallScreen(
                 ) {
                     Column {
                         Text(
-                            text = currentCall?.callerName ?: "Unknown",
+                            text = displayName,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White
                         )
-                        
                         if (callState is CallState.Connected) {
                             Text(
                                 text = formatDuration(callDuration),
@@ -238,19 +266,14 @@ fun VideoCallScreen(
                             )
                         }
                     }
-                    
                     IconButton(onClick = { viewModel.switchCamera() }) {
-                        Icon(
-                            Icons.Default.FlipCameraAndroid,
-                            contentDescription = "Switch Camera",
-                            tint = Color.White
-                        )
+                        Icon(Icons.Default.FlipCameraAndroid, "Switch Camera", tint = Color.White)
                     }
                 }
             }
         }
-        
-        // Bottom Controls (only show after answering)
+
+        // ========== BOTTOM CONTROLS ==========
         if (hasAnswered && callState !is CallState.Ended) {
             AnimatedVisibility(
                 visible = showControls || callState !is CallState.Connected,
@@ -261,49 +284,30 @@ fun VideoCallScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.5f))
+                        .background(Color.Black.copy(alpha = 0.6f))
                         .padding(24.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Mute Button
                     VideoCallControlButton(
                         icon = if (isMuted) Icons.Default.MicOff else Icons.Default.Mic,
                         isActive = isMuted,
                         onClick = { viewModel.toggleMute() }
                     )
-                    
-                    // Video Toggle
                     VideoCallControlButton(
                         icon = if (isVideoEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
                         isActive = !isVideoEnabled,
                         onClick = { viewModel.toggleVideo() }
                     )
-                    
-                    // End Call
                     FloatingActionButton(
-                        onClick = {
-                            viewModel.endCall()
-                            onEndCall()
-                        },
-                        containerColor = Color.Red,
-                        contentColor = Color.White,
+                        onClick = { viewModel.endCall(); onEndCall() },
+                        containerColor = Color.Red, contentColor = Color.White,
                         modifier = Modifier.size(64.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.CallEnd,
-                            contentDescription = "End Call",
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                    
-                    // Switch Camera
+                    ) { Icon(Icons.Default.CallEnd, null, Modifier.size(32.dp)) }
                     VideoCallControlButton(
                         icon = Icons.Default.FlipCameraAndroid,
                         onClick = { viewModel.switchCamera() }
                     )
-                    
-                    // Speaker
                     VideoCallControlButton(
                         icon = Icons.Default.VolumeUp,
                         onClick = { viewModel.toggleSpeaker() }
@@ -328,11 +332,7 @@ private fun VideoCallControlButton(
             contentColor = if (isActive) Color.Black else Color.White
         )
     ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp)
-        )
+        Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
     }
 }
 
@@ -340,10 +340,6 @@ private fun formatDuration(seconds: Int): String {
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60
     val secs = seconds % 60
-    
-    return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, secs)
-    } else {
-        String.format("%02d:%02d", minutes, secs)
-    }
+    return if (hours > 0) String.format("%d:%02d:%02d", hours, minutes, secs)
+    else String.format("%02d:%02d", minutes, secs)
 }

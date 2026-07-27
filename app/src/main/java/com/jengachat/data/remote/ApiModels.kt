@@ -87,6 +87,13 @@ data class UpdateProfileRequest(
     val avatarUrl: String? = null
 )
 
+@Serializable
+data class UpdateConversationRequest(
+    val name: String? = null,
+    val avatar: String? = null,
+    val description: String? = null
+)
+
 // ==================== KEYS (Signal Protocol) ====================
 
 @Serializable
@@ -421,12 +428,6 @@ data class ReactionResponse(
 // TypingEvent is defined in WebSocketClient.kt - use that one
 
 // ==================== UPDATE REQUESTS ====================
-
-@Serializable
-data class UpdateConversationRequest(
-    val name: String? = null,
-    val avatar: String? = null
-)
 
 @Serializable
 data class PresenceUpdateRequest(

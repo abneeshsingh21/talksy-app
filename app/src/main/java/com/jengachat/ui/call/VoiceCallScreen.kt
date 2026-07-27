@@ -1,10 +1,13 @@
 package com.jengachat.ui.call
 
+import android.media.RingtoneManager
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,9 +19,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
@@ -27,22 +33,60 @@ import kotlinx.coroutines.delay
 fun VoiceCallScreen(
     callId: String,
     isIncoming: Boolean = false,
+    callerName: String = "",
+    callerPhotoUrl: String = "",
     onEndCall: () -> Unit,
     viewModel: CallViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val currentCall by viewModel.currentCall.collectAsState()
     val callState by viewModel.callState.collectAsState()
     val isMuted by viewModel.isMuted.collectAsState()
     val isSpeakerOn by viewModel.isSpeakerOn.collectAsState()
-    
+
     var callDuration by remember { mutableIntStateOf(0) }
     var hasAnswered by remember { mutableStateOf(!isIncoming) }
-    
-    // Only auto-answer if not an incoming call
+    var showKeypad by remember { mutableStateOf(false) }
+    var keypadInput by remember { mutableStateOf("") }
+
+    // Resolve display name: nav arg → server call data → fallback
+    val displayName = remember(currentCall, callerName) {
+        currentCall?.callerName?.takeIf { it.isNotEmpty() }
+            ?: callerName.takeIf { it.isNotEmpty() }
+            ?: "Unknown Caller"
+    }
+    val photoUrl = remember(currentCall, callerPhotoUrl) {
+        currentCall?.callerAvatar?.takeIf { it.isNotEmpty() }
+            ?: currentCall?.callerPhotoUrl?.takeIf { it.isNotEmpty() }
+            ?: callerPhotoUrl.takeIf { it.isNotEmpty() }
+    }
+
+    // Ringtone for incoming calls
+    val ringtone = remember {
+        if (isIncoming) {
+            try {
+                val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                RingtoneManager.getRingtone(context, uri)
+            } catch (e: Exception) { null }
+        } else null
+    }
+
     LaunchedEffect(callId) {
         viewModel.observeCall(callId)
     }
-    
+
+    // Play/stop ringtone
+    LaunchedEffect(isIncoming, hasAnswered) {
+        if (isIncoming && !hasAnswered) {
+            ringtone?.play()
+        } else {
+            ringtone?.stop()
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose { ringtone?.stop() }
+    }
+
     // Timer for call duration
     LaunchedEffect(callState) {
         if (callState is CallState.Connected) {
@@ -52,15 +96,16 @@ fun VoiceCallScreen(
             }
         }
     }
-    
+
     // Handle call ended
     LaunchedEffect(callState) {
         if (callState is CallState.Ended) {
-            delay(2000) // Show "Call Ended" for 2 seconds
+            ringtone?.stop()
+            delay(2000)
             onEndCall()
         }
     }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -81,25 +126,25 @@ fun VoiceCallScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(60.dp))
-            
+
             // Caller Avatar with pulsing animation
             PulsingAvatar(
-                photoUrl = currentCall?.callerAvatar ?: currentCall?.callerPhotoUrl,
+                photoUrl = photoUrl,
                 isRinging = !hasAnswered && isIncoming
             )
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Caller Name
             Text(
-                text = currentCall?.callerName ?: "Unknown Caller",
+                text = displayName,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             // Call Status
             Text(
                 text = when {
@@ -116,9 +161,9 @@ fun VoiceCallScreen(
                 fontSize = 16.sp,
                 color = Color.White.copy(alpha = 0.7f)
             )
-            
+
             Spacer(modifier = Modifier.weight(1f))
-            
+
             // Show Answer/Decline buttons for incoming call that hasn't been answered
             if (!hasAnswered && isIncoming) {
                 Row(
@@ -129,6 +174,7 @@ fun VoiceCallScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         FloatingActionButton(
                             onClick = {
+                                ringtone?.stop()
                                 viewModel.rejectCall(callId)
                                 onEndCall()
                             },
@@ -149,11 +195,12 @@ fun VoiceCallScreen(
                             fontSize = 14.sp
                         )
                     }
-                    
+
                     // Answer Button
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         FloatingActionButton(
                             onClick = {
+                                ringtone?.stop()
                                 hasAnswered = true
                                 viewModel.answerCall(callId)
                             },
@@ -188,23 +235,23 @@ fun VoiceCallScreen(
                         isActive = isMuted,
                         onClick = { viewModel.toggleMute() }
                     )
-                    
+
                     CallControlButton(
                         icon = if (isSpeakerOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
                         label = "Speaker",
                         isActive = isSpeakerOn,
                         onClick = { viewModel.toggleSpeaker() }
                     )
-                    
+
                     CallControlButton(
                         icon = Icons.Default.Dialpad,
                         label = "Keypad",
-                        onClick = { /* TODO */ }
+                        onClick = { showKeypad = true }
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(48.dp))
-                
+
                 // End Call Button
                 FloatingActionButton(
                     onClick = {
@@ -222,15 +269,91 @@ fun VoiceCallScreen(
                     )
                 }
             } else {
-                // Call Ended - Show return button
                 Text(
                     text = "Call ended",
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 18.sp
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(48.dp))
+        }
+
+        // Keypad Dialog
+        if (showKeypad) {
+            Dialog(onDismissRequest = { showKeypad = false }) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFF1E1E2E)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = keypadInput,
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Light,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp),
+                            textAlign = TextAlign.Center
+                        )
+
+                        val keys = listOf(
+                            listOf("1", "2", "3"),
+                            listOf("4", "5", "6"),
+                            listOf("7", "8", "9"),
+                            listOf("*", "0", "#")
+                        )
+                        keys.forEach { row ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            ) {
+                                row.forEach { key ->
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = Color.White.copy(alpha = 0.15f),
+                                        modifier = Modifier
+                                            .size(72.dp)
+                                            .clickable { keypadInput += key }
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = key,
+                                                color = Color.White,
+                                                fontSize = 22.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            TextButton(onClick = { showKeypad = false }) {
+                                Text("Close", color = Color.White.copy(alpha = 0.7f))
+                            }
+                            if (keypadInput.isNotEmpty()) {
+                                IconButton(onClick = {
+                                    if (keypadInput.isNotEmpty()) {
+                                        keypadInput = keypadInput.dropLast(1)
+                                    }
+                                }) {
+                                    Icon(Icons.Default.Backspace, contentDescription = "Delete", tint = Color.White)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -241,7 +364,7 @@ fun PulsingAvatar(
     isRinging: Boolean
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    
+
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = if (isRinging) 1.1f else 1f,
@@ -251,7 +374,7 @@ fun PulsingAvatar(
         ),
         label = "scale"
     )
-    
+
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.3f,
         targetValue = if (isRinging) 0.6f else 0.3f,
@@ -261,7 +384,7 @@ fun PulsingAvatar(
         ),
         label = "alpha"
     )
-    
+
     Box(contentAlignment = Alignment.Center) {
         // Outer pulsing ring
         if (isRinging) {
@@ -271,7 +394,7 @@ fun PulsingAvatar(
                     .clip(CircleShape)
                     .background(Color.White.copy(alpha = alpha * 0.3f))
             )
-            
+
             Box(
                 modifier = Modifier
                     .size((140 * scale).dp)
@@ -279,7 +402,7 @@ fun PulsingAvatar(
                     .background(Color.White.copy(alpha = alpha * 0.15f))
             )
         }
-        
+
         // Avatar
         Surface(
             modifier = Modifier.size(100.dp),
@@ -334,9 +457,9 @@ fun CallControlButton(
                 modifier = Modifier.size(28.dp)
             )
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         Text(
             text = label,
             fontSize = 12.sp,
@@ -349,7 +472,7 @@ private fun formatDuration(seconds: Int): String {
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60
     val secs = seconds % 60
-    
+
     return if (hours > 0) {
         String.format("%d:%02d:%02d", hours, minutes, secs)
     } else {

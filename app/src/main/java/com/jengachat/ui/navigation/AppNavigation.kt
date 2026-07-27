@@ -29,13 +29,13 @@ sealed class Screen(val route: String) {
         fun createRoute(chatId: String) = "group_info/$chatId"
     }
     
-    object VoiceCall : Screen("voice_call/{callId}?isIncoming={isIncoming}") {
-        fun createRoute(callId: String, isIncoming: Boolean = false) = 
-            "voice_call/$callId?isIncoming=$isIncoming"
+    object VoiceCall : Screen("voice_call/{callId}?isIncoming={isIncoming}&callerName={callerName}") {
+        fun createRoute(callId: String, isIncoming: Boolean = false, callerName: String = "") =
+            "voice_call/$callId?isIncoming=$isIncoming&callerName=${java.net.URLEncoder.encode(callerName, "UTF-8")}"
     }
-    object VideoCall : Screen("video_call/{callId}?isIncoming={isIncoming}") {
-        fun createRoute(callId: String, isIncoming: Boolean = false) = 
-            "video_call/$callId?isIncoming=$isIncoming"
+    object VideoCall : Screen("video_call/{callId}?isIncoming={isIncoming}&callerName={callerName}") {
+        fun createRoute(callId: String, isIncoming: Boolean = false, callerName: String = "") =
+            "video_call/$callId?isIncoming=$isIncoming&callerName=${java.net.URLEncoder.encode(callerName, "UTF-8")}"
     }
     object GroupCall : Screen("group_call/{callId}?isIncoming={isIncoming}") {
         fun createRoute(callId: String, isIncoming: Boolean = false) = 
@@ -128,21 +128,21 @@ fun AppNavigation(
                 onBackClick = { navController.popBackStack() },
                 onGroupInfoClick = { navController.navigate(Screen.GroupInfo.createRoute(chatId)) },
                 onVoiceCallClick = { conversationId ->
-                    // Initiate voice call via API
+                    // Get current chat to pass caller name
+                    val currentChat = navController.currentBackStackEntry
                     callViewModel.initiateCallForConversation(
                         conversationId = conversationId,
                         callType = CallType.VOICE
                     ) { callId ->
-                        navController.navigate(Screen.VoiceCall.createRoute(callId))
+                        navController.navigate(Screen.VoiceCall.createRoute(callId, callerName = conversationId))
                     }
                 },
                 onVideoCallClick = { conversationId ->
-                    // Initiate video call via API
                     callViewModel.initiateCallForConversation(
                         conversationId = conversationId,
                         callType = CallType.VIDEO
                     ) { callId ->
-                        navController.navigate(Screen.VideoCall.createRoute(callId))
+                        navController.navigate(Screen.VideoCall.createRoute(callId, callerName = conversationId))
                     }
                 }
             )
@@ -192,14 +192,17 @@ fun AppNavigation(
             route = Screen.VoiceCall.route,
             arguments = listOf(
                 navArgument("callId") { type = NavType.StringType },
-                navArgument("isIncoming") { type = NavType.BoolType; defaultValue = false }
+                navArgument("isIncoming") { type = NavType.BoolType; defaultValue = false },
+                navArgument("callerName") { type = NavType.StringType; defaultValue = "" }
             )
         ) { backStackEntry ->
             val callId = backStackEntry.arguments?.getString("callId") ?: return@composable
             val isIncoming = backStackEntry.arguments?.getBoolean("isIncoming") ?: false
+            val callerName = backStackEntry.arguments?.getString("callerName") ?: ""
             VoiceCallScreen(
                 callId = callId,
                 isIncoming = isIncoming,
+                callerName = java.net.URLDecoder.decode(callerName, "UTF-8"),
                 onEndCall = { navController.popBackStack() }
             )
         }
@@ -208,14 +211,17 @@ fun AppNavigation(
             route = Screen.VideoCall.route,
             arguments = listOf(
                 navArgument("callId") { type = NavType.StringType },
-                navArgument("isIncoming") { type = NavType.BoolType; defaultValue = false }
+                navArgument("isIncoming") { type = NavType.BoolType; defaultValue = false },
+                navArgument("callerName") { type = NavType.StringType; defaultValue = "" }
             )
         ) { backStackEntry ->
             val callId = backStackEntry.arguments?.getString("callId") ?: return@composable
             val isIncoming = backStackEntry.arguments?.getBoolean("isIncoming") ?: false
+            val callerName = backStackEntry.arguments?.getString("callerName") ?: ""
             VideoCallScreen(
                 callId = callId,
                 isIncoming = isIncoming,
+                callerName = java.net.URLDecoder.decode(callerName, "UTF-8"),
                 onEndCall = { navController.popBackStack() }
             )
         }

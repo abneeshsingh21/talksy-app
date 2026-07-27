@@ -201,12 +201,14 @@ class CustomChatRepositoryImpl @Inject constructor(
         photoUri: String?
     ): Resource<Chat> {
         return try {
-            val request = mutableMapOf<String, Any?>()
-            name?.let { request["name"] = it }
-            description?.let { request["description"] = it }
-            photoUri?.let { request["avatar"] = it }
-
-            val response = api.updateConversation(chatId, request)
+            val response = api.updateConversation(
+                chatId,
+                UpdateConversationRequest(
+                    name = name,
+                    description = description,
+                    avatar = photoUri
+                )
+            )
 
             if (response.isSuccessful && response.body()?.success == true) {
                 val chat = response.body()!!.data!!.toChat()
@@ -459,7 +461,30 @@ class CustomChatRepositoryImpl @Inject constructor(
     ): Resource<Message> {
         return try {
             val currentUserId = tokenManager.userId ?: return Resource.Error("Not logged in")
-            
+            val localMessageId = java.util.UUID.randomUUID().toString()
+
+            // ===== OPTIMISTIC UPDATE - Show media IMMEDIATELY =====
+            val optimisticMessage = Message(
+                id = localMessageId,
+                localId = localMessageId,
+                chatId = chatId,
+                senderId = currentUserId,
+                senderName = "",
+                senderPhotoUrl = "",
+                text = caption ?: "",
+                type = when (type) {
+                    "image" -> MessageType.IMAGE
+                    "video" -> MessageType.VIDEO
+                    "audio", "voice" -> MessageType.AUDIO
+                    "document" -> MessageType.DOCUMENT
+                    else -> MessageType.TEXT
+                },
+                mediaUrl = mediaUri, // Show local data immediately
+                status = MessageStatus.SENDING,
+                createdAt = System.currentTimeMillis()
+            )
+            updateMessageCache(chatId, optimisticMessage)
+
             // 1. Encrypt caption using E2EE session key for conversation
             val encryptedCaption = if (!caption.isNullOrEmpty() && sessionManager.hasSession(chatId)) {
                 val sessionKey = sessionManager.getSessionKey(chatId)

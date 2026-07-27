@@ -102,13 +102,13 @@ class CustomUserRepositoryImpl @Inject constructor(
         photoUrl: String?
     ): Resource<User> {
         return try {
-            val request = mutableMapOf<String, Any?>()
-            displayName?.let { request["displayName"] = it }
-            status?.let { request["statusText"] = it }
-            photoUrl?.let { request["avatarUrl"] = it }
-
-            val response = api.updateProfile(request)
-
+            val response = api.updateProfile(
+                UpdateProfileRequest(
+                    displayName = displayName,
+                    statusText = status,
+                    avatarUrl = photoUrl
+                )
+            )
             if (response.isSuccessful && response.body()?.success == true) {
                 val user = response.body()!!.data!!.toUser()
                 cacheUser(user)
@@ -123,10 +123,7 @@ class CustomUserRepositoryImpl @Inject constructor(
 
     override suspend fun updateProfilePhoto(photoUri: String): Resource<String> {
         return try {
-            // TODO: Implement actual file upload
-            // For now, just update with the URI directly
-            val response = api.updateProfile(mapOf("avatarUrl" to photoUri))
-
+            val response = api.updateProfile(UpdateProfileRequest(avatarUrl = photoUri))
             if (response.isSuccessful && response.body()?.success == true) {
                 val avatarUrl = response.body()!!.data!!.avatarUrl ?: photoUri
                 Resource.Success(avatarUrl)

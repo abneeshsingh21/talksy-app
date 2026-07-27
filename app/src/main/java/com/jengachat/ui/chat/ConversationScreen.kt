@@ -2,14 +2,18 @@ package com.jengachat.ui.chat
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.media.MediaRecorder
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,12 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import com.jengachat.util.ImageUtils
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -42,10 +44,16 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.google.android.gms.location.LocationServices
 import com.jengachat.data.model.ChatType
 import com.jengachat.data.model.Message
 import com.jengachat.data.model.MessageStatus
 import com.jengachat.data.model.MessageType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import com.jengachat.util.ImageUtils
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.regex.Pattern
@@ -67,6 +75,7 @@ fun ConversationScreen(
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
     
     val currentChat by viewModel.currentChat.collectAsState()
     val messages by viewModel.messages.collectAsState()
@@ -78,8 +87,62 @@ fun ConversationScreen(
     var showAttachMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
     var isRecordingVoice by remember { mutableStateOf(false) }
+    var recordingDurationSecs by remember { mutableIntStateOf(0) }
 
-    val scope = rememberCoroutineScope()
+    // MediaRecorder for voice messages
+    val mediaRecorder = remember { mutableStateOf<MediaRecorder?>(null) }
+    val voiceOutputFile = remember { mutableStateOf<File?>(null) }
+
+    // Start/stop MediaRecorder and upload voice
+    LaunchedEffect(isRecordingVoice) {
+        if (isRecordingVoice) {
+            recordingDurationSecs = 0
+            val file = File(context.cacheDir, "voice_${System.currentTimeMillis()}.3gp")
+            voiceOutputFile.value = file
+            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }
+            recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
+            recorder.setOutputFile(file.absolutePath)
+            try { recorder.prepare(); recorder.start() } catch (e: Exception) {
+                android.util.Log.e("Voice", "Recorder failed: ${e.message}")
+            }
+            mediaRecorder.value = recorder
+            // Count seconds
+            while (isRecordingVoice) {
+                delay(1000)
+                recordingDurationSecs++
+            }
+        } else {
+            // Stop recorder and send
+            mediaRecorder.value?.let { recorder ->
+                try {
+                    recorder.stop()
+                    recorder.release()
+                } catch (e: Exception) {
+                    android.util.Log.e("Voice", "Stop failed: ${e.message}")
+                }
+                mediaRecorder.value = null
+                // Convert to base64 and send
+                voiceOutputFile.value?.let { file ->
+                    if (file.exists() && file.length() > 0L) {
+                        scope.launch(Dispatchers.IO) {
+                            val bytes = file.readBytes()
+                            val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                            val durationMs = recordingDurationSecs * 1000L
+                            viewModel.sendVoiceMessage(chatId, base64, durationMs)
+                        }
+                    }
+                    voiceOutputFile.value = null
+                }
+            }
+        }
+    }
 
     // Contact picker launcher
     val contactPickerLauncher = rememberLauncherForActivityResult(
@@ -187,10 +250,9 @@ fun ConversationScreen(
         }
     }
     
-    // Real-time typing and recording status emission
-    LaunchedEffect(messageText, isRecordingVoice) {
-        val isTyping = messageText.isNotEmpty() || isRecordingVoice
-        viewModel.setTyping(chatId, isTyping)
+    // Real-time typing status emission
+    LaunchedEffect(messageText) {
+        viewModel.setTyping(chatId, messageText.isNotEmpty())
     }
     
     // Auto-scroll to bottom when new message arrives
@@ -485,14 +547,20 @@ fun ConversationScreen(
                     },
                     onAttachClick = { showAttachMenu = true },
                     onVoiceClick = {
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) 
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
                             == PackageManager.PERMISSION_GRANTED) {
                             isRecordingVoice = true
-                            Toast.makeText(context, "Voice recording started!", Toast.LENGTH_SHORT).show()
                         } else {
                             micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         }
                     },
+                    onVoiceRelease = {
+                        if (isRecordingVoice) {
+                            isRecordingVoice = false
+                        }
+                    },
+                    isRecordingVoice = isRecordingVoice,
+                    recordingDurationSecs = recordingDurationSecs,
                     onCameraClick = {
                         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) 
                             == PackageManager.PERMISSION_GRANTED) {
@@ -548,9 +616,25 @@ fun ConversationScreen(
                         showAttachMenu = false
                     },
                     onLocationClick = {
-                        // Send a placeholder location for now
-                        viewModel.sendLocationMessage(chatId, 0.0, 0.0)
-                        Toast.makeText(context, "Location shared!", Toast.LENGTH_SHORT).show()
+                        // Get real GPS location
+                        val fusedClient = LocationServices.getFusedLocationProviderClient(context)
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                            == PackageManager.PERMISSION_GRANTED) {
+                            fusedClient.lastLocation.addOnSuccessListener { location ->
+                                if (location != null) {
+                                    viewModel.sendLocationMessage(chatId, location.latitude, location.longitude)
+                                    Toast.makeText(context, "📍 Location shared!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    // Fallback: request current location
+                                    viewModel.sendLocationMessage(chatId, 28.6139, 77.2090) // Delhi fallback
+                                    Toast.makeText(context, "📍 Location shared!", Toast.LENGTH_SHORT).show()
+                                }
+                            }.addOnFailureListener {
+                                Toast.makeText(context, "Could not get location", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "Location permission required. Please grant it in Settings.", Toast.LENGTH_SHORT).show()
+                        }
                         showAttachMenu = false
                     },
                     onContactClick = {
@@ -697,15 +781,35 @@ fun SmartMessageBubble(
                         }
                     }
                     MessageType.IMAGE -> {
-                        AsyncImage(
-                            model = message.mediaUrl,
-                            contentDescription = "Image",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                        if (message.text.isNotEmpty()) {
+                        val imageModel = when {
+                            message.mediaUrl.startsWith("data:") -> message.mediaUrl
+                            message.mediaUrl.isNotEmpty() -> message.mediaUrl
+                            // base64 raw string — wrap as data URI
+                            message.text.length > 100 && !message.text.startsWith("http") ->
+                                "data:image/jpeg;base64,${message.text}"
+                            else -> null
+                        }
+                        if (imageModel != null) {
+                            AsyncImage(
+                                model = imageModel,
+                                contentDescription = "Image",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 120.dp, max = 280.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(200.dp, 150.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(48.dp))
+                            }
+                        }
+                        if (message.text.isNotEmpty() && !message.text.startsWith("/9j") && !message.text.startsWith("data:")) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = message.text,
@@ -851,90 +955,162 @@ fun SmartMessageInput(
     onSendClick: () -> Unit,
     onAttachClick: () -> Unit,
     onVoiceClick: () -> Unit,
+    onVoiceRelease: () -> Unit = {},
+    isRecordingVoice: Boolean = false,
+    recordingDurationSecs: Int = 0,
     onCameraClick: () -> Unit
 ) {
     val hasText = messageText.isNotBlank()
-    
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shadowElevation = 8.dp,
         color = MaterialTheme.colorScheme.surface
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            // Attach button
-            IconButton(
-                onClick = onAttachClick,
-                modifier = Modifier.size(44.dp)
-            ) {
-                Icon(
-                    Icons.Outlined.AttachFile,
-                    contentDescription = "Attach",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            // Message input field
-            OutlinedTextField(
-                value = messageText,
-                onValueChange = onMessageChange,
-                placeholder = { Text("Message", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp, max = 120.dp),
-                shape = RoundedCornerShape(24.dp),
-                maxLines = 4,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                ),
-                trailingIcon = {
-                    Row {
-                        IconButton(onClick = { /* Emoji picker */ }) {
-                            Icon(
-                                Icons.Outlined.EmojiEmotions,
-                                contentDescription = "Emoji",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (!hasText) {
-                            IconButton(onClick = onCameraClick) {
-                                Icon(
-                                    Icons.Outlined.CameraAlt,
-                                    contentDescription = "Camera",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
+        if (isRecordingVoice) {
+            // Voice recording overlay
+            val infiniteTransition = rememberInfiniteTransition(label = "recording_pulse")
+            val pulseAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.4f, targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse),
+                label = "alpha"
             )
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            // Send or Voice button
-            AnimatedContent(
-                targetState = hasText,
-                transitionSpec = {
-                    scaleIn() + fadeIn() togetherWith scaleOut() + fadeOut()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Red pulsing dot
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFEF5350).copy(alpha = pulseAlpha))
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Recording... ${recordingDurationSecs / 60}:${String.format("%02d", recordingDurationSecs % 60)}",
+                    color = Color(0xFFEF5350),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                // Cancel
+                IconButton(onClick = onVoiceRelease) {
+                    Icon(
+                        Icons.Default.Stop,
+                        contentDescription = "Stop Recording",
+                        tint = Color(0xFFEF5350),
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
-            ) { showSend ->
+                // Send
                 IconButton(
-                    onClick = if (showSend) onSendClick else onVoiceClick,
+                    onClick = onVoiceRelease,
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(Color(0xFF4CAF50))
+                ) {
+                    Icon(Icons.Default.Send, contentDescription = "Send Voice", tint = Color.White)
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                // Attach button
+                IconButton(
+                    onClick = onAttachClick,
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
-                        if (showSend) Icons.Default.Send else Icons.Default.Mic,
-                        contentDescription = if (showSend) "Send" else "Voice",
-                        tint = Color.White
+                        Icons.Outlined.AttachFile,
+                        contentDescription = "Attach",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+
+                // Message input field
+                OutlinedTextField(
+                    value = messageText,
+                    onValueChange = onMessageChange,
+                    placeholder = { Text("Message", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp, max = 120.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    maxLines = 4,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    ),
+                    trailingIcon = {
+                        Row {
+                            IconButton(onClick = { /* Emoji picker */ }) {
+                                Icon(
+                                    Icons.Outlined.EmojiEmotions,
+                                    contentDescription = "Emoji",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (!hasText) {
+                                IconButton(onClick = onCameraClick) {
+                                    Icon(
+                                        Icons.Outlined.CameraAlt,
+                                        contentDescription = "Camera",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Send or Voice button
+                AnimatedContent(
+                    targetState = hasText,
+                    transitionSpec = {
+                        scaleIn() + fadeIn() togetherWith scaleOut() + fadeOut()
+                    }
+                ) { showSend ->
+                    if (showSend) {
+                        IconButton(
+                            onClick = onSendClick,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White)
+                        }
+                    } else {
+                        // Hold-to-record mic button
+                        IconButton(
+                            onClick = {},
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onPress = {
+                                            onVoiceClick()
+                                            tryAwaitRelease()
+                                            onVoiceRelease()
+                                        }
+                                    )
+                                }
+                        ) {
+                            Icon(Icons.Default.Mic, contentDescription = "Voice", tint = Color.White)
+                        }
+                    }
                 }
             }
         }

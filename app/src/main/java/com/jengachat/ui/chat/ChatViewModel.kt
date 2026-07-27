@@ -124,19 +124,25 @@ class ChatViewModel @Inject constructor(
     
     fun sendLocationMessage(chatId: String, latitude: Double, longitude: Double) {
         viewModelScope.launch {
-            val locationContent = "📍 Location: $latitude, $longitude"
+            val locationContent = "📍 Location: $latitude, $longitude\nhttps://maps.google.com/?q=$latitude,$longitude"
             when (val result = chatRepository.sendMessage(chatId, locationContent, null)) {
-                is Resource.Success -> {
-                    // Location shared successfully
-                }
-                is Resource.Error -> {
-                    _error.value = result.message
-                }
+                is Resource.Success -> { /* Location shared */ }
+                is Resource.Error -> { _error.value = result.message }
                 is Resource.Loading -> {}
             }
         }
     }
-    
+
+    fun sendVoiceMessage(chatId: String, base64Audio: String, durationMs: Long) {
+        viewModelScope.launch {
+            when (val result = chatRepository.sendVoiceMessage(chatId, base64Audio, durationMs)) {
+                is Resource.Success -> { /* Voice message sent */ }
+                is Resource.Error -> { _error.value = result.message }
+                is Resource.Loading -> {}
+            }
+        }
+    }
+
     private val _isCreatingChat = MutableStateFlow(false)
     val isCreatingChat: StateFlow<Boolean> = _isCreatingChat.asStateFlow()
 

@@ -38,7 +38,7 @@ interface TalksyApi {
     suspend fun getMe(): Response<UserResponse>
 
     @PUT("api/users/me")
-    suspend fun updateProfile(@Body request: Map<String, Any?>): Response<UserResponse>
+    suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<UserResponse>
 
     @DELETE("api/users/me")
     suspend fun deleteAccount(): Response<ApiResponse>
@@ -86,7 +86,7 @@ interface TalksyApi {
     @PUT("api/conversations/{conversationId}")
     suspend fun updateConversation(
         @Path("conversationId") conversationId: String,
-        @Body request: Map<String, Any?>
+        @Body request: UpdateConversationRequest
     ): Response<ConversationResponse>
 
     @POST("api/conversations/{conversationId}/participants")

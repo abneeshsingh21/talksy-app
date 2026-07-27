@@ -120,6 +120,9 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    // Google Play Services - Location (for real GPS)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
     
     // Retrofit & OkHttp for REST API
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
