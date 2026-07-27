@@ -128,9 +128,9 @@ class NetworkClient @Inject constructor(
         // For local testing with Android Emulator: http://10.0.2.2:3000/
         // For local testing with physical device: http://<your-computer-ip>:3000/
         // For production: https://your-domain.com/
-        const val BASE_URL = "https://jengachat-server.onrender.com/"
+        const val BASE_URL = "https://talksy-chat-server.vercel.app/"
         
         // WebSocket URL
-        const val WS_URL = "wss://jengachat-server.onrender.com/ws"
+        const val WS_URL = "wss://talksy-chat-server.vercel.app/ws"
     }
 }
