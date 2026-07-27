@@ -137,18 +137,28 @@ class ChatViewModel @Inject constructor(
         }
     }
     
+    private val _isCreatingChat = MutableStateFlow(false)
+    val isCreatingChat: StateFlow<Boolean> = _isCreatingChat.asStateFlow()
+
     fun createOrGetPrivateChat(otherUserId: String, onSuccess: (String) -> Unit) {
         viewModelScope.launch {
-            when (val result = chatRepository.createPrivateChat(otherUserId)) {
-                is Resource.Success -> {
-                    result.data?.let { chat ->
-                        onSuccess(chat.id)
+            _isCreatingChat.value = true
+            try {
+                when (val result = chatRepository.createPrivateChat(otherUserId)) {
+                    is Resource.Success -> {
+                        result.data?.let { chat ->
+                            onSuccess(chat.id)
+                        }
                     }
+                    is Resource.Error -> {
+                        _error.value = result.message ?: "Failed to start chat"
+                    }
+                    is Resource.Loading -> {}
                 }
-                is Resource.Error -> {
-                    _error.value = result.message
-                }
-                is Resource.Loading -> {}
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Error starting chat"
+            } finally {
+                _isCreatingChat.value = false
             }
         }
     }
@@ -340,6 +350,26 @@ class ChatViewModel @Inject constructor(
             try {
                 // TODO: Implement chatRepository.forwardMessage when backend is ready
                 onSuccess() // Placeholder - call success for now
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
+    }
+
+    fun muteChat(chatId: String, isMuted: Boolean) {
+        viewModelScope.launch {
+            try {
+                chatRepository.muteChat(chatId, isMuted)
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
+    }
+
+    fun deleteChat(chatId: String) {
+        viewModelScope.launch {
+            try {
+                chatRepository.deleteChat(chatId)
             } catch (e: Exception) {
                 _error.value = e.message
             }

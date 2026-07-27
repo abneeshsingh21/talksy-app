@@ -45,6 +45,7 @@ fun ChatListScreen(
     
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var showMenu by remember { mutableStateOf(false) }
     
     // Filter chats based on search query
     val filteredChats = if (searchQuery.isBlank()) {
@@ -127,6 +128,44 @@ fun ChatListScreen(
                                         contentDescription = "Profile",
                                         tint = Color.White
                                     )
+                                }
+                                Box {
+                                    IconButton(onClick = { showMenu = true }) {
+                                        Icon(
+                                            Icons.Default.MoreVert,
+                                            contentDescription = "More Options",
+                                            tint = Color.White
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = showMenu,
+                                        onDismissRequest = { showMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("New Group") },
+                                            leadingIcon = { Icon(Icons.Default.GroupAdd, contentDescription = null) },
+                                            onClick = {
+                                                showMenu = false
+                                                onNewChatClick()
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Call History") },
+                                            leadingIcon = { Icon(Icons.Default.Call, contentDescription = null) },
+                                            onClick = {
+                                                showMenu = false
+                                                onCallHistoryClick()
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("My Profile") },
+                                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                                            onClick = {
+                                                showMenu = false
+                                                onProfileClick()
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }

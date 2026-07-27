@@ -669,6 +669,16 @@ class CustomChatRepositoryImpl @Inject constructor(
 
     private suspend fun loadMessages(chatId: String) {
         try {
+            // Auto-restore E2EE session key if missing for this conversation
+            if (!sessionManager.hasSession(chatId)) {
+                val currentUserId = tokenManager.userId
+                val chat = _chats.value.find { it.id == chatId }
+                val otherUserId = chat?.participants?.find { it != currentUserId }
+                if (otherUserId != null) {
+                    initializeE2EESession(chatId, otherUserId)
+                }
+            }
+
             val response = api.getMessages(chatId, 50, null)
             if (response.isSuccessful && response.body()?.success == true) {
                 val messages = response.body()!!.data?.map { decryptMessage(it.toMessage()) } ?: emptyList()

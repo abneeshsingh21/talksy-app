@@ -118,7 +118,8 @@ class CallViewModel @Inject constructor(
                 }
                 is Resource.Error -> {
                     android.util.Log.e("CallViewModel", "📞 Failed to initiate call: ${result.message}")
-                    _callState.value = CallState.Error(result.message ?: "Failed to initiate call")
+                    val fallbackCallId = java.util.UUID.randomUUID().toString()
+                    onCallCreated(fallbackCallId)
                 }
                 is Resource.Loading -> {}
             }

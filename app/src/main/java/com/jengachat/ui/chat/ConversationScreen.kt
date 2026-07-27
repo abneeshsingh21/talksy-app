@@ -26,6 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import com.jengachat.util.ImageUtils
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -73,7 +76,20 @@ fun ConversationScreen(
     var selectedMessageId by remember { mutableStateOf<String?>(null) }
     var showReactionPicker by remember { mutableStateOf(false) }
     var showAttachMenu by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
     var isRecordingVoice by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
+
+    // Contact picker launcher
+    val contactPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickContact()
+    ) { uri ->
+        uri?.let {
+            viewModel.sendMessage(chatId, "👤 Shared Contact: $it")
+            Toast.makeText(context, "Contact shared!", Toast.LENGTH_SHORT).show()
+        }
+    }
     
     // Permission launcher
     val micPermissionLauncher = rememberLauncherForActivityResult(
@@ -91,8 +107,13 @@ fun ConversationScreen(
         ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            viewModel.sendMediaMessage(chatId, it.toString(), "image")
-            Toast.makeText(context, "Sending image...", Toast.LENGTH_SHORT).show()
+            scope.launch(Dispatchers.IO) {
+                val base64 = ImageUtils.uriToBase64(context, it, maxWidth = 800, quality = 80)
+                if (!base64.isNullOrEmpty()) {
+                    viewModel.sendMediaMessage(chatId, base64, "image")
+                }
+            }
+            Toast.makeText(context, "Uploading image...", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -101,8 +122,13 @@ fun ConversationScreen(
         ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            viewModel.sendMediaMessage(chatId, it.toString(), "document")
-            Toast.makeText(context, "Sending document...", Toast.LENGTH_SHORT).show()
+            scope.launch(Dispatchers.IO) {
+                val base64 = ImageUtils.uriToBase64(context, it, maxWidth = 800, quality = 80)
+                if (!base64.isNullOrEmpty()) {
+                    viewModel.sendMediaMessage(chatId, base64, "document")
+                }
+            }
+            Toast.makeText(context, "Uploading document...", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -111,8 +137,13 @@ fun ConversationScreen(
         ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            viewModel.sendMediaMessage(chatId, it.toString(), "video")
-            Toast.makeText(context, "Sending video...", Toast.LENGTH_SHORT).show()
+            scope.launch(Dispatchers.IO) {
+                val base64 = ImageUtils.uriToBase64(context, it, maxWidth = 800, quality = 80)
+                if (!base64.isNullOrEmpty()) {
+                    viewModel.sendMediaMessage(chatId, base64, "video")
+                }
+            }
+            Toast.makeText(context, "Uploading video...", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -121,7 +152,10 @@ fun ConversationScreen(
         ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
         bitmap?.let {
-            viewModel.sendMediaMessage(chatId, "camera_photo", "image")
+            val outputStream = java.io.ByteArrayOutputStream()
+            it.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, outputStream)
+            val base64 = android.util.Base64.encodeToString(outputStream.toByteArray(), android.util.Base64.NO_WRAP)
+            viewModel.sendMediaMessage(chatId, base64, "image")
             Toast.makeText(context, "Photo sent!", Toast.LENGTH_SHORT).show()
         }
     }
@@ -151,6 +185,12 @@ fun ConversationScreen(
         if (unreadMessageIds.isNotEmpty()) {
             viewModel.markAsRead(chatId, unreadMessageIds)
         }
+    }
+    
+    // Real-time typing and recording status emission
+    LaunchedEffect(messageText, isRecordingVoice) {
+        val isTyping = messageText.isNotEmpty() || isRecordingVoice
+        viewModel.setTyping(chatId, isTyping)
     }
     
     // Auto-scroll to bottom when new message arrives
@@ -251,11 +291,19 @@ fun ConversationScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    if (currentChat?.typingUsers?.isNotEmpty() == true) {
+                                    if (isRecordingVoice) {
+                                        Text(
+                                            text = "🎙️ recording audio...",
+                                            color = Color(0xFF10B981),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    } else if (currentChat?.typingUsers?.isNotEmpty() == true) {
                                         Text(
                                             text = "typing...",
-                                            color = Color.White.copy(alpha = 0.8f),
-                                            fontSize = 13.sp
+                                            color = Color(0xFF10B981),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
                                         )
                                     } else if (isOnline) {
                                         Text(
@@ -291,12 +339,47 @@ fun ConversationScreen(
                                     tint = Color.White
                                 )
                             }
-                            IconButton(onClick = { /* More options */ }) {
-                                Icon(
-                                    Icons.Default.MoreVert,
-                                    contentDescription = "More",
-                                    tint = Color.White
-                                )
+                            Box {
+                                IconButton(onClick = { showMoreMenu = true }) {
+                                    Icon(
+                                        Icons.Default.MoreVert,
+                                        contentDescription = "More",
+                                        tint = Color.White
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showMoreMenu,
+                                    onDismissRequest = { showMoreMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(if (currentChat?.type == ChatType.GROUP) "Group Info" else "Contact Info") },
+                                        leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            if (currentChat?.type == ChatType.GROUP) {
+                                                onGroupInfoClick()
+                                            }
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Mute Notifications") },
+                                        leadingIcon = { Icon(Icons.Default.NotificationsOff, contentDescription = null) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            viewModel.muteChat(chatId, true)
+                                            Toast.makeText(context, "Notifications muted", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Clear Chat") },
+                                        leadingIcon = { Icon(Icons.Default.DeleteSweep, contentDescription = null) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            viewModel.deleteChat(chatId)
+                                            Toast.makeText(context, "Chat cleared", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                }
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
@@ -471,7 +554,7 @@ fun ConversationScreen(
                         showAttachMenu = false
                     },
                     onContactClick = {
-                        Toast.makeText(context, "Contact sharing coming soon", Toast.LENGTH_SHORT).show()
+                        contactPickerLauncher.launch(null)
                         showAttachMenu = false
                     }
                 )

@@ -364,6 +364,8 @@ class CustomCallRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Failed to get call history")
         }
+    }
+
     override suspend fun deleteCall(callId: String): Resource<Unit> {
         return try {
             val response = api.deleteCall(callId)

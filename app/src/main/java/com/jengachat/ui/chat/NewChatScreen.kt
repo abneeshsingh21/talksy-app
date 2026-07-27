@@ -44,6 +44,9 @@ fun NewChatScreen(
     val hasContactsPermission = viewModel.hasContactsPermission
     val context = LocalContext.current
     
+    val isCreatingChat by viewModel.isCreatingChat.collectAsState()
+    val error by viewModel.error.collectAsState()
+    
     // Permission launcher
     val permissionLauncher = rememberMultiplePermissionsLauncher { results ->
         if (results.all { it.value }) {
@@ -63,6 +66,13 @@ fun NewChatScreen(
             viewModel.searchUsers(searchQuery)
         }
     }
+
+    LaunchedEffect(error) {
+        error?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.clearError()
+        }
+    }
     
     Scaffold(
         topBar = {
@@ -74,7 +84,7 @@ fun NewChatScreen(
                     }
                 },
                 actions = {
-                    if (contactsSyncing) {
+                    if (contactsSyncing || isCreatingChat) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp).padding(end = 16.dp),
                             strokeWidth = 2.dp

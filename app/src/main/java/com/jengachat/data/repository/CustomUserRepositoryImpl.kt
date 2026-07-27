@@ -104,7 +104,7 @@ class CustomUserRepositoryImpl @Inject constructor(
         return try {
             val request = mutableMapOf<String, Any?>()
             displayName?.let { request["displayName"] = it }
-            status?.let { request["bio"] = it }
+            status?.let { request["statusText"] = it }
             photoUrl?.let { request["avatarUrl"] = it }
 
             val response = api.updateProfile(request)
