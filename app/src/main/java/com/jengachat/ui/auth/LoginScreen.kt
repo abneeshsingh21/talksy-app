@@ -182,14 +182,25 @@ fun LoginScreen(
             
             // Sign Up Link
             Row(
-                horizontalArrangement = Arrangement.Center
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Don't have an account? ",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "Don't have an account?",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp
                 )
-                TextButton(onClick = onSignUpClick) {
-                    Text("Sign Up", fontWeight = FontWeight.SemiBold)
+                TextButton(
+                    onClick = onSignUpClick,
+                    contentPadding = PaddingValues(start = 6.dp)
+                ) {
+                    Text(
+                        text = "Sign Up",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }

@@ -1,6 +1,7 @@
 package com.jengachat.data.remote
 
 import okhttp3.Authenticator
+import okhttp3.ConnectionPool
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -92,12 +93,13 @@ class NetworkClient @Inject constructor(
     }
 
     private val okHttpClient = OkHttpClient.Builder()
+        .connectionPool(ConnectionPool(10, 5, TimeUnit.MINUTES))
         .addInterceptor(authInterceptor)
         .addInterceptor(loggingInterceptor)
         .authenticator(tokenAuthenticator)
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .writeTimeout(10, TimeUnit.SECONDS)
         .build()
 
     private val retrofit = Retrofit.Builder()
