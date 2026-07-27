@@ -175,8 +175,8 @@ data class ConversationsResponse(
 
 @Serializable
 data class ConversationDto(
-    val id: String,
-    val type: String,
+    val id: String = "",
+    val type: String = "private",
     val name: String? = null,
     @SerialName("avatar") val avatarUrl: String? = null,
     val participants: List<ParticipantDto> = emptyList(),
@@ -189,6 +189,7 @@ data class ConversationDto(
     val isNew: Boolean? = null,
     val conversationId: String? = null
 ) {
+    val actualId: String get() = id.ifEmpty { conversationId ?: "" }
     val isGroup: Boolean get() = type == "group"
     val avatar: String? get() = avatarUrl
 }

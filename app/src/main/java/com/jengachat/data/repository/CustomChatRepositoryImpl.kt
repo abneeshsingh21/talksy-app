@@ -829,7 +829,7 @@ class CustomChatRepositoryImpl @Inject constructor(
 // Extension functions for DTO conversion
 fun ConversationDto.toChat(): Chat {
     return Chat(
-        id = id,
+        id = actualId,
         type = if (isGroup) ChatType.GROUP else ChatType.PRIVATE,
         participants = participants.map { it.id },
         participantDetails = participants.associate { 
