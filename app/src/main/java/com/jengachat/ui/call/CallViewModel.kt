@@ -247,8 +247,8 @@ class CallViewModel @Inject constructor(
     
     fun deleteCallFromHistory(callId: String) {
         viewModelScope.launch {
-            // Remove from local list
             _callHistory.value = _callHistory.value.filter { it.id != callId }
+            callRepository.deleteCall(callId)
         }
     }
     

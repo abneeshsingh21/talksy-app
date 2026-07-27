@@ -4,6 +4,8 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.*
 import java.security.spec.ECGenParameterSpec
@@ -26,7 +28,20 @@ import javax.inject.Singleton
 class CryptoManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val prefs = context.getSharedPreferences("crypto_keys", Context.MODE_PRIVATE)
+    private val prefs = try {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        EncryptedSharedPreferences.create(
+            context,
+            "crypto_keys_encrypted",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    } catch (e: Exception) {
+        context.getSharedPreferences("crypto_keys_encrypted", Context.MODE_PRIVATE)
+    }
     
     // ==================== KEY GENERATION ====================
     
@@ -146,12 +161,19 @@ class CryptoManager @Inject constructor(
     }
     
     /**
-     * Key Derivation Function (HKDF simplified)
+     * Key Derivation Function (HKDF HMAC-SHA256 Extract-and-Expand)
      */
-    private fun kdf(input: ByteArray): ByteArray {
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(ByteArray(32), "HmacSHA256"))
-        return mac.doFinal(input)
+    private fun kdf(input: ByteArray, salt: ByteArray? = null, info: ByteArray = "TalksyE2EE".toByteArray()): ByteArray {
+        val actualSalt = if (salt == null || salt.isEmpty()) ByteArray(32) else salt
+        val macExtract = Mac.getInstance("HmacSHA256")
+        macExtract.init(SecretKeySpec(actualSalt, "HmacSHA256"))
+        val prk = macExtract.doFinal(input)
+        
+        val macExpand = Mac.getInstance("HmacSHA256")
+        macExpand.init(SecretKeySpec(prk, "HmacSHA256"))
+        macExpand.update(info)
+        macExpand.update(1.toByte())
+        return macExpand.doFinal()
     }
     
     /**

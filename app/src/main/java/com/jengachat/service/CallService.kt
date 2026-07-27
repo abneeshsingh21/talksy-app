@@ -106,12 +106,36 @@ class CallService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
+        val action = intent?.action
+        if (action == null) {
+            val notification = createOngoingCallNotification("Call", false)
+            startForeground(NOTIFICATION_ID, notification)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        val callerName = intent.getStringExtra(EXTRA_CALLER_NAME) ?: "Call"
+        val isVideo = intent.getStringExtra(EXTRA_CALL_TYPE) == CallType.VIDEO.name
+        val callId = intent.getStringExtra(EXTRA_CALL_ID) ?: ""
+        val isIncoming = intent.getBooleanExtra(EXTRA_IS_INCOMING, false)
+        
+        val initialNotification = if (action == ACTION_INCOMING_CALL || isIncoming) {
+            createIncomingCallNotification(callId, callerName, isVideo)
+        } else {
+            createOngoingCallNotification(callerName, isVideo)
+        }
+        startForeground(NOTIFICATION_ID, initialNotification)
+
+        when (action) {
             ACTION_START_CALL -> handleStartCall(intent)
             ACTION_INCOMING_CALL -> handleIncomingCall(intent)
             ACTION_ANSWER_CALL -> handleAnswerCall(intent)
             ACTION_REJECT_CALL -> handleRejectCall(intent)
             ACTION_END_CALL -> handleEndCall()
+            else -> {
+                stopSelf()
+                return START_NOT_STICKY
+            }
         }
         
         return START_STICKY

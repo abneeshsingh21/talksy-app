@@ -26,6 +26,12 @@ interface TalksyApi {
     @POST("api/auth/change-password")
     suspend fun changePassword(@Body request: Map<String, String>): Response<ApiResponse>
 
+    @POST("api/auth/forgot-password")
+    suspend fun forgotPassword(@Body request: ForgotPasswordRequest): Response<ApiResponse>
+
+    @POST("api/auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): Response<ApiResponse>
+
     // ==================== USERS ====================
 
     @GET("api/users/me")
@@ -34,13 +40,16 @@ interface TalksyApi {
     @PUT("api/users/me")
     suspend fun updateProfile(@Body request: Map<String, Any?>): Response<UserResponse>
 
-    @PUT("api/users/presence")
+    @DELETE("api/users/me")
+    suspend fun deleteAccount(): Response<ApiResponse>
+
+    @PUT("api/users/status")
     suspend fun updatePresence(@Body request: Map<String, String>): Response<ApiResponse>
 
     @GET("api/users/search")
     suspend fun searchUsers(@Query("q") query: String): Response<UsersResponse>
 
-    @GET("api/users/{userId}")
+    @GET("api/users/id/{userId}")
     suspend fun getUser(@Path("userId") userId: String): Response<UserResponse>
 
     @POST("api/users/{userId}/block")
@@ -95,6 +104,18 @@ interface TalksyApi {
     @DELETE("api/conversations/{conversationId}/leave")
     suspend fun leaveConversation(@Path("conversationId") conversationId: String): Response<ApiResponse>
 
+    @PUT("api/conversations/{conversationId}/pin")
+    suspend fun pinChat(
+        @Path("conversationId") conversationId: String,
+        @Body request: Map<String, Boolean>
+    ): Response<ApiResponse>
+
+    @PUT("api/conversations/{conversationId}/mute")
+    suspend fun muteChat(
+        @Path("conversationId") conversationId: String,
+        @Body request: Map<String, Boolean>
+    ): Response<ApiResponse>
+
     // ==================== MESSAGES ====================
 
     @POST("api/messages")
@@ -110,12 +131,23 @@ interface TalksyApi {
     @POST("api/messages/{messageId}/read")
     suspend fun markMessageRead(@Path("messageId") messageId: String): Response<ApiResponse>
 
+    @POST("api/messages/read")
+    suspend fun markRead(@Body request: MarkReadRequest): Response<ApiResponse>
+
     @DELETE("api/messages/{messageId}")
     suspend fun deleteMessage(
         @Path("messageId") messageId: String,
         @Query("forEveryone") forEveryone: Boolean = false
     ): Response<ApiResponse>
 
+
+    // ==================== MEDIA ====================
+
+    @POST("api/media/upload")
+    suspend fun uploadMedia(@Body request: UploadMediaRequest): Response<MediaResponse>
+
+    @GET("api/media/{mediaId}")
+    suspend fun downloadMedia(@Path("mediaId") mediaId: String): Response<MediaResponse>
 
     // ==================== CALLS ====================
 
@@ -149,8 +181,11 @@ interface TalksyApi {
         @Body request: Map<String, String>
     ): Response<ApiResponse>
 
-    @GET("api/calls/history")
-    suspend fun getCallHistory(): Response<CallsResponse>
+    @GET("api/calls/history/{conversationId}")
+    suspend fun getCallHistory(@Path("conversationId") conversationId: String = ""): Response<CallsResponse>
+
+    @DELETE("api/calls/{callId}")
+    suspend fun deleteCall(@Path("callId") callId: String): Response<ApiResponse>
 
     // ==================== CONTACTS SYNC ====================
 

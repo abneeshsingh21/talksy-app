@@ -2,6 +2,8 @@ package com.jengachat.crypto
 
 import android.content.Context
 import android.util.Base64
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.jengachat.data.remote.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.KeyPair
@@ -18,7 +20,20 @@ class SessionManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val cryptoManager: CryptoManager
 ) {
-    private val prefs = context.getSharedPreferences("sessions", Context.MODE_PRIVATE)
+    private val prefs = try {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        EncryptedSharedPreferences.create(
+            context,
+            "sessions_encrypted",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    } catch (e: Exception) {
+        context.getSharedPreferences("sessions_encrypted", Context.MODE_PRIVATE)
+    }
     
     // Cache of session keys: conversationId -> sessionKey
     private val sessionCache = mutableMapOf<String, ByteArray>()

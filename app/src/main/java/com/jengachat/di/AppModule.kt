@@ -17,7 +17,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "jenga_chat_prefs")
+import androidx.room.Room
+import com.jengachat.data.local.TalksyDatabase
+import com.jengachat.data.local.dao.ChatDao
+import com.jengachat.data.local.dao.MessageDao
+
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "talksy_prefs")
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -27,6 +32,30 @@ object AppModule {
     @Singleton
     fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
         return context.dataStore
+    }
+
+    // ==================== Database Components ====================
+
+    @Provides
+    @Singleton
+    fun provideTalksyDatabase(@ApplicationContext context: Context): TalksyDatabase {
+        return Room.databaseBuilder(
+            context,
+            TalksyDatabase::class.java,
+            "talksy_db"
+        ).fallbackToDestructiveMigration().build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMessageDao(database: TalksyDatabase): MessageDao {
+        return database.messageDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideChatDao(database: TalksyDatabase): ChatDao {
+        return database.chatDao()
     }
 
     // ==================== Network Components ====================

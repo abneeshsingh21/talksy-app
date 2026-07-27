@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,8 +31,8 @@ class CustomChatRepositoryImpl @Inject constructor(
     
     // Local cache for chats
     private val _chats = MutableStateFlow<List<Chat>>(emptyList())
-    private val _messagesCache = mutableMapOf<String, MutableStateFlow<List<Message>>>()
-    private val _typingCache = mutableMapOf<String, MutableStateFlow<List<String>>>()
+    private val _messagesCache = ConcurrentHashMap<String, MutableStateFlow<List<Message>>>()
+    private val _typingCache = ConcurrentHashMap<String, MutableStateFlow<List<String>>>()
 
     init {
         // Listen to incoming WebSocket messages
@@ -132,8 +133,8 @@ class CustomChatRepositoryImpl @Inject constructor(
                 val chat = conversationDto.toChat()
                 updateChatCache(chat)
                 
-                // Initialize E2EE session with the other user
-                initializeE2EESession(otherUserId)
+                // Initialize E2EE session for the conversation
+                initializeE2EESession(chat.id, otherUserId)
                 
                 Resource.Success(chat)
             } else {
@@ -165,7 +166,7 @@ class CustomChatRepositoryImpl @Inject constructor(
                 
                 // Initialize E2EE sessions with all participants
                 participantIds.forEach { userId ->
-                    initializeE2EESession(userId)
+                    initializeE2EESession(chat.id, userId)
                 }
                 
                 Resource.Success(chat)
@@ -226,7 +227,7 @@ class CustomChatRepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body()?.success == true) {
                 // Initialize E2EE sessions with new participants
                 userIds.forEach { userId ->
-                    initializeE2EESession(userId)
+                    initializeE2EESession(chatId, userId)
                 }
                 Resource.Success(Unit)
             } else {
@@ -277,29 +278,37 @@ class CustomChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun pinChat(chatId: String, isPinned: Boolean): Resource<Unit> {
-        // Pinning is handled locally for now
-        _chats.update { chats ->
-            chats.map { chat ->
-                if (chat.id == chatId) {
-                    val userId = tokenManager.userId ?: return@map chat
-                    chat.copy(isPinned = chat.isPinned + (userId to isPinned))
-                } else chat
+        return try {
+            val userId = tokenManager.userId ?: return Resource.Error("Not logged in")
+            _chats.update { chats ->
+                chats.map { chat ->
+                    if (chat.id == chatId) {
+                        chat.copy(isPinned = chat.isPinned + (userId to isPinned))
+                    } else chat
+                }
             }
+            api.pinChat(chatId, mapOf("isPinned" to isPinned))
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to pin chat")
         }
-        return Resource.Success(Unit)
     }
 
     override suspend fun muteChat(chatId: String, isMuted: Boolean): Resource<Unit> {
-        // Muting is handled locally for now
-        _chats.update { chats ->
-            chats.map { chat ->
-                if (chat.id == chatId) {
-                    val userId = tokenManager.userId ?: return@map chat
-                    chat.copy(isMuted = chat.isMuted + (userId to isMuted))
-                } else chat
+        return try {
+            val userId = tokenManager.userId ?: return Resource.Error("Not logged in")
+            _chats.update { chats ->
+                chats.map { chat ->
+                    if (chat.id == chatId) {
+                        chat.copy(isMuted = chat.isMuted + (userId to isMuted))
+                    } else chat
+                }
             }
+            api.muteChat(chatId, mapOf("isMuted" to isMuted))
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Failed to mute chat")
         }
-        return Resource.Success(Unit)
     }
 
     override fun observeChats(): Flow<List<Chat>> {
@@ -337,13 +346,9 @@ class CustomChatRepositoryImpl @Inject constructor(
             val currentUserId = tokenManager.userId ?: return Resource.Error("Not logged in")
             val localMessageId = java.util.UUID.randomUUID().toString()
             
-            // Get the other participant for E2EE
-            val chat = _chats.value.find { it.id == chatId }
-            val recipientId = chat?.participants?.find { it != currentUserId }
-            
-            // Encrypt the message if we have a session
-            val encryptedText = if (recipientId != null && sessionManager.hasSession(recipientId)) {
-                val sessionKey = sessionManager.getSessionKey(recipientId)
+            // Encrypt the message if we have a session for this conversation
+            val encryptedText = if (sessionManager.hasSession(chatId)) {
+                val sessionKey = sessionManager.getSessionKey(chatId)
                 if (sessionKey != null) {
                     cryptoManager.encryptMessage(text, sessionKey)
                 } else text
@@ -455,15 +460,38 @@ class CustomChatRepositoryImpl @Inject constructor(
         return try {
             val currentUserId = tokenManager.userId ?: return Resource.Error("Not logged in")
             
-            // First upload the media
-            // TODO: Implement actual file upload
-            // For now, we'll just send a message with the media URL
-            
+            // 1. Encrypt caption using E2EE session key for conversation
+            val encryptedCaption = if (!caption.isNullOrEmpty() && sessionManager.hasSession(chatId)) {
+                val sessionKey = sessionManager.getSessionKey(chatId)
+                if (sessionKey != null) cryptoManager.encrypt(caption, sessionKey) else caption
+            } else {
+                caption ?: ""
+            }
+
+            // 2. Upload encrypted media blob to server if present
+            var uploadedMediaId: String? = null
+            if (mediaUri.isNotEmpty()) {
+                try {
+                    val uploadReq = UploadMediaRequest(
+                        encryptedData = mediaUri,
+                        mimeType = type,
+                        conversationId = chatId
+                    )
+                    val uploadRes = api.uploadMedia(uploadReq)
+                    if (uploadRes.isSuccessful && uploadRes.body()?.success == true) {
+                        uploadedMediaId = uploadRes.body()?.data?.mediaId
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("ChatRepository", "Media upload warning: ${e.message}")
+                }
+            }
+
+            // 3. Send message with mediaId & encrypted caption
             val request = SendMessageRequest(
                 conversationId = chatId,
                 messageType = type,
-                encryptedContent = caption ?: "",
-                mediaId = null // TODO: get media ID from upload
+                encryptedContent = encryptedCaption,
+                mediaId = uploadedMediaId
             )
 
             val response = api.sendMessage(request)
@@ -475,6 +503,7 @@ class CustomChatRepositoryImpl @Inject constructor(
                     "video" -> MessageType.VIDEO
                     "audio", "voice" -> MessageType.AUDIO
                     "document" -> MessageType.DOCUMENT
+                    "location" -> MessageType.LOCATION
                     else -> MessageType.TEXT
                 }
                 val message = Message(
@@ -508,10 +537,13 @@ class CustomChatRepositoryImpl @Inject constructor(
 
     override suspend fun markAsRead(chatId: String, messageIds: List<String>): Resource<Unit> {
         return try {
-            messageIds.forEach { messageId ->
-                api.markMessageRead(messageId)
+            webSocketClient.sendReadReceipt(chatId, messageIds)
+            val response = api.markRead(MarkReadRequest(conversationId = chatId, messageIds = messageIds))
+            if (response.isSuccessful && response.body()?.success == true) {
+                Resource.Success(Unit)
+            } else {
+                Resource.Error(response.body()?.error ?: "Failed to mark as read")
             }
-            Resource.Success(Unit)
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Failed to mark as read")
         }
@@ -669,9 +701,9 @@ class CustomChatRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun initializeE2EESession(userId: String) {
+    private suspend fun initializeE2EESession(conversationId: String, userId: String) {
         try {
-            if (sessionManager.hasSession(userId)) return
+            if (sessionManager.hasSession(conversationId)) return
 
             // Fetch user's prekey bundle
             val response = api.getUserKeys(userId)
@@ -696,7 +728,7 @@ class CustomChatRepositoryImpl @Inject constructor(
                 
                 // Derive session key
                 val sessionKey = cryptoManager.deriveSessionKey(sharedSecret)
-                sessionManager.saveSessionKey(userId, sessionKey)
+                sessionManager.saveSessionKey(conversationId, sessionKey)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -740,9 +772,10 @@ class CustomChatRepositoryImpl @Inject constructor(
     }
 
     private fun decryptMessage(message: Message): Message {
-        // Try to decrypt if we have a session with the sender
-        return if (sessionManager.hasSession(message.senderId)) {
-            val sessionKey = sessionManager.getSessionKey(message.senderId)
+        // Try to decrypt using conversationId session key
+        val chatId = message.chatId
+        return if (sessionManager.hasSession(chatId)) {
+            val sessionKey = sessionManager.getSessionKey(chatId)
             if (sessionKey != null) {
                 try {
                     val decryptedText = cryptoManager.decryptMessage(message.text, sessionKey)

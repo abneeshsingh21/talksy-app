@@ -68,9 +68,9 @@ class TalksyApp : Application() {
     }
 
     companion object {
-        const val CHANNEL_MESSAGES = "jenga_chat_messages"
-        const val CHANNEL_CALLS = "jenga_chat_calls"
-        const val CHANNEL_MISSED_CALLS = "jenga_chat_missed_calls"
-        const val CHANNEL_GENERAL = "jenga_chat_general"
+        const val CHANNEL_MESSAGES = "talksy_messages"
+        const val CHANNEL_CALLS = "talksy_calls"
+        const val CHANNEL_MISSED_CALLS = "talksy_missed_calls"
+        const val CHANNEL_GENERAL = "talksy_general"
     }
 }

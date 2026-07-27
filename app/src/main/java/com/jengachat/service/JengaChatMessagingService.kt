@@ -13,6 +13,8 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.jengachat.R
+import com.jengachat.TalksyApp
+import com.jengachat.data.remote.NetworkClient
 import com.jengachat.ui.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -28,13 +30,11 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class TalksyMessagingService : FirebaseMessagingService() {
     
+    @Inject
+    lateinit var networkClient: NetworkClient
+
     companion object {
         private const val TAG = "TalksyFCM"
-        
-        // Notification Channel IDs
-        const val CHANNEL_MESSAGES = "Talksy_messages"
-        const val CHANNEL_CALLS = "Talksy_calls"
-        const val CHANNEL_GENERAL = "Talksy_general"
         
         // Notification IDs
         private var notificationId = 0
@@ -126,7 +126,7 @@ class TalksyMessagingService : FirebaseMessagingService() {
         // Show notification with sound
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         
-        val notification = NotificationCompat.Builder(this, CHANNEL_MESSAGES)
+        val notification = NotificationCompat.Builder(this, TalksyApp.CHANNEL_MESSAGES)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(senderName)
             .setContentText(message)
@@ -181,7 +181,7 @@ class TalksyMessagingService : FirebaseMessagingService() {
         
         val callTypeText = if (callType == "video") "Video Call" else "Voice Call"
         
-        val notification = NotificationCompat.Builder(this, CHANNEL_CALLS)
+        val notification = NotificationCompat.Builder(this, TalksyApp.CHANNEL_CALLS)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Incoming $callTypeText")
             .setContentText("$callerName is calling...")
@@ -225,7 +225,7 @@ class TalksyMessagingService : FirebaseMessagingService() {
         
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         
-        val notification = NotificationCompat.Builder(this, CHANNEL_MESSAGES)
+        val notification = NotificationCompat.Builder(this, TalksyApp.CHANNEL_MESSAGES)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(groupName)
             .setContentText("$senderName: $message")
@@ -258,7 +258,7 @@ class TalksyMessagingService : FirebaseMessagingService() {
         
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         
-        val notification = NotificationCompat.Builder(this, CHANNEL_GENERAL)
+        val notification = NotificationCompat.Builder(this, TalksyApp.CHANNEL_GENERAL)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(body)
@@ -281,7 +281,7 @@ class TalksyMessagingService : FirebaseMessagingService() {
             
             // Messages channel
             val messagesChannel = NotificationChannel(
-                CHANNEL_MESSAGES,
+                TalksyApp.CHANNEL_MESSAGES,
                 "Messages",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
@@ -299,7 +299,7 @@ class TalksyMessagingService : FirebaseMessagingService() {
             
             // Calls channel with ringtone
             val callsChannel = NotificationChannel(
-                CHANNEL_CALLS,
+                TalksyApp.CHANNEL_CALLS,
                 "Incoming Calls",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
@@ -318,7 +318,7 @@ class TalksyMessagingService : FirebaseMessagingService() {
             
             // General channel
             val generalChannel = NotificationChannel(
-                CHANNEL_GENERAL,
+                TalksyApp.CHANNEL_GENERAL,
                 "General",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
@@ -351,14 +351,21 @@ class TalksyMessagingService : FirebaseMessagingService() {
      * Send FCM token to server
      */
     private suspend fun sendTokenToServer(token: String) {
-        // This will be called by the API when user logs in
-        // Token is stored locally and sent when registering
         try {
             val prefs = getSharedPreferences("fcm_prefs", Context.MODE_PRIVATE)
             prefs.edit().putString("fcm_token", token).apply()
             Log.d(TAG, "FCM token saved locally")
+
+            val response = networkClient.api.registerFcmToken(
+                mapOf("token" to token, "platform" to "android")
+            )
+            if (response.isSuccessful && response.body()?.success == true) {
+                Log.d(TAG, "FCM token registered on server successfully")
+            } else {
+                Log.e(TAG, "Failed to register FCM token on server: ${response.body()?.error}")
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to save FCM token", e)
+            Log.e(TAG, "Failed to save or register FCM token", e)
         }
     }
 }

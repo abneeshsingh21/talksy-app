@@ -155,9 +155,14 @@ class CustomAuthRepositoryImpl @Inject constructor(
 
     override suspend fun deleteAccount(): Resource<Unit> {
         return try {
+            val response = api.deleteAccount()
             signOut()
             cryptoManager.clearAllKeys()
-            Resource.Success(Unit)
+            if (response.isSuccessful && response.body()?.success == true) {
+                Resource.Success(Unit)
+            } else {
+                Resource.Error(response.body()?.error ?: "Account deletion failed")
+            }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Account deletion failed")
         }
@@ -165,13 +170,12 @@ class CustomAuthRepositoryImpl @Inject constructor(
     
     override suspend fun resetPassword(email: String): Resource<Unit> {
         return try {
-            // Note: This requires the server to implement a forgot-password endpoint
-            // For now, we'll simulate a successful response
-            // TODO: Implement actual API call when server endpoint is ready
-            // val response = api.forgotPassword(ForgotPasswordRequest(email))
-            
-            // Simulating success for now
-            Resource.Success(Unit)
+            val response = api.forgotPassword(ForgotPasswordRequest(email))
+            if (response.isSuccessful && response.body()?.success == true) {
+                Resource.Success(Unit)
+            } else {
+                Resource.Error(response.body()?.error ?: "Failed to send reset email")
+            }
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Failed to send reset email")
         }
@@ -217,6 +221,21 @@ class CustomAuthRepositoryImpl @Inject constructor(
             )
             
             api.uploadKeys(request)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Check server prekey count and replenish if low (< 20)
+     */
+    suspend fun checkAndReplenishPreKeys() {
+        try {
+            val response = api.getPreKeyCount()
+            if (response.isSuccessful && response.body()?.success == true) {
+                // If count is low or empty, replenish prekeys
+                uploadPublicKeys()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }

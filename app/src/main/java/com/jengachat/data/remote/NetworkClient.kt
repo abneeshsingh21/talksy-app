@@ -1,6 +1,5 @@
 package com.jengachat.data.remote
 
-import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -8,13 +7,21 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
 import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Call
 import retrofit2.Retrofit
+import retrofit2.http.Body
+import retrofit2.http.POST
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+
+interface RefreshApi {
+    @POST("api/auth/refresh")
+    fun refreshToken(@Body request: RefreshRequest): Call<RefreshResponse>
+}
 
 /**
  * Network module for Talksy API
@@ -54,34 +61,31 @@ class NetworkClient @Inject constructor(
             if (response.code == 401) {
                 val refreshToken = tokenManager.refreshToken ?: return null
                 
-                // Create a new request to refresh the token
-                val refreshRequest = runBlocking {
-                    try {
-                        val refreshResponse = createRefreshApi().refreshToken(
-                            RefreshRequest(refreshToken)
-                        )
-                        
-                        if (refreshResponse.isSuccessful && refreshResponse.body()?.success == true) {
-                            val data = refreshResponse.body()?.data
-                            if (data != null) {
-                                tokenManager.accessToken = data.accessToken
+                try {
+                    val refreshResponse = createRefreshApi().refreshToken(
+                        RefreshRequest(refreshToken)
+                    ).execute()
+                    
+                    if (refreshResponse.isSuccessful && refreshResponse.body()?.success == true) {
+                        val data = refreshResponse.body()?.data
+                        if (data != null) {
+                            tokenManager.accessToken = data.accessToken
+                            if (!data.refreshToken.isNullOrEmpty()) {
                                 tokenManager.refreshToken = data.refreshToken
-                                return@runBlocking response.request.newBuilder()
-                                    .header("Authorization", "Bearer ${data.accessToken}")
-                                    .build()
                             }
+                            return response.request.newBuilder()
+                                .header("Authorization", "Bearer ${data.accessToken}")
+                                .build()
                         }
-                        
-                        // Refresh failed, clear tokens
-                        tokenManager.clearTokens()
-                        null
-                    } catch (e: Exception) {
-                        tokenManager.clearTokens()
-                        null
                     }
+                    
+                    // Refresh failed, clear tokens
+                    tokenManager.clearTokens()
+                    return null
+                } catch (e: Exception) {
+                    tokenManager.clearTokens()
+                    return null
                 }
-                
-                return refreshRequest
             }
             return null
         }
@@ -105,7 +109,7 @@ class NetworkClient @Inject constructor(
     val api: TalksyApi = retrofit.create(TalksyApi::class.java)
 
     // Separate client for refresh to avoid circular dependency
-    private fun createRefreshApi(): TalksyApi {
+    private fun createRefreshApi(): RefreshApi {
         val client = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -116,7 +120,7 @@ class NetworkClient @Inject constructor(
             .client(client)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
-            .create(TalksyApi::class.java)
+            .create(RefreshApi::class.java)
     }
 
     companion object {

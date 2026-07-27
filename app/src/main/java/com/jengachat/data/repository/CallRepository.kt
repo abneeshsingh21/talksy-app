@@ -40,4 +40,5 @@ interface CallRepository {
     fun observeCall(callId: String): Flow<Call?>
     fun observeIncomingCalls(): Flow<Call?>
     suspend fun getCallHistory(): Resource<List<Call>>
+    suspend fun deleteCall(callId: String): Resource<Unit>
 }

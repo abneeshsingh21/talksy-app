@@ -38,11 +38,11 @@
     <!-- Features -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
-    <uses-feature android:name="android.hardware.microphone" android:required="true" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <application
         android:name=".TalksyApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -66,16 +66,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Call Activity -->
-        <activity
-            android:name=".ui.CallActivity"
-            android:exported="false"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:showOnLockScreen="true"
-            android:turnScreenOn="true"
-            android:showWhenLocked="true" />
-
         <!-- Call Service -->
         <service
             android:name=".service.CallService"
@@ -90,7 +80,7 @@
 
         <!-- Firebase Cloud Messaging Service -->
         <service
-            android:name=".service.JengaChatMessagingService"
+            android:name=".service.TalksyMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -106,7 +96,7 @@
             android:resource="@color/notification_color" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="jengachat_messages" />
+            android:value="talksy_messages" />
 
     </application>
 

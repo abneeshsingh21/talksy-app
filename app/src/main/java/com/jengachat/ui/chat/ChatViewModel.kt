@@ -110,17 +110,9 @@ class ChatViewModel @Inject constructor(
     
     fun sendMediaMessage(chatId: String, mediaUri: String, mediaType: String) {
         viewModelScope.launch {
-            // For now, send as a text message with media URL
-            // In production, you'd upload the file first then send the URL
-            val messageContent = when (mediaType) {
-                "image" -> "📷 Photo"
-                "video" -> "🎥 Video"
-                "document" -> "📄 Document"
-                else -> "📎 Attachment"
-            }
-            when (val result = chatRepository.sendMessage(chatId, messageContent, null)) {
+            when (val result = chatRepository.sendMediaMessage(chatId, mediaUri, mediaType, null)) {
                 is Resource.Success -> {
-                    // Message sent successfully
+                    // Media sent successfully
                 }
                 is Resource.Error -> {
                     _error.value = result.message

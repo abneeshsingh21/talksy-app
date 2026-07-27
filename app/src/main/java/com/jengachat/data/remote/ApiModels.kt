@@ -48,7 +48,7 @@ data class RefreshResponse(
 @Serializable
 data class RefreshData(
     val accessToken: String,
-    val refreshToken: String
+    val refreshToken: String? = null
 )
 
 // ==================== USER ====================

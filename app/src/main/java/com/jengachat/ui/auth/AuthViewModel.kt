@@ -31,8 +31,8 @@ class AuthViewModel @Inject constructor(
             _errorMessage.value = "Please enter a valid email"
             return
         }
-        if (password.length < 6) {
-            _errorMessage.value = "Password must be at least 6 characters"
+        if (password.length < 8) {
+            _errorMessage.value = "Password must be at least 8 characters"
             return
         }
         
@@ -62,8 +62,8 @@ class AuthViewModel @Inject constructor(
             _errorMessage.value = "Please enter a valid email"
             return
         }
-        if (password.length < 6) {
-            _errorMessage.value = "Password must be at least 6 characters"
+        if (password.length < 8) {
+            _errorMessage.value = "Password must be at least 8 characters"
             return
         }
         if (password != confirmPassword) {
@@ -89,12 +89,12 @@ class AuthViewModel @Inject constructor(
     }
     
     fun changePassword(currentPassword: String, newPassword: String, confirmPassword: String) {
-        if (currentPassword.length < 6) {
-            _errorMessage.value = "Current password must be at least 6 characters"
+        if (currentPassword.length < 8) {
+            _errorMessage.value = "Current password must be at least 8 characters"
             return
         }
-        if (newPassword.length < 6) {
-            _errorMessage.value = "New password must be at least 6 characters"
+        if (newPassword.length < 8) {
+            _errorMessage.value = "New password must be at least 8 characters"
             return
         }
         if (newPassword != confirmPassword) {

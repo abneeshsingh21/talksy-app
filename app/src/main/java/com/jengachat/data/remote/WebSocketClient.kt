@@ -20,6 +20,7 @@ class WebSocketClient @Inject constructor(
     private val tokenManager: TokenManager
 ) {
     private var webSocket: WebSocket? = null
+    @Volatile
     private var isConnected = false
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var reconnectJob: Job? = null
@@ -91,6 +92,13 @@ class WebSocketClient @Inject constructor(
                 _connectionState.value = ConnectionState.Connected
                 reconnectJob?.cancel()
                 
+                // Send frame-level auth
+                try {
+                    webSocket.send("{\"type\":\"auth\",\"data\":{\"token\":\"$token\"}}")
+                } catch (e: Exception) {
+                    android.util.Log.e("WebSocketClient", "Auth frame error: ${e.message}")
+                }
+                
                 // Flush any pending messages that were queued while offline
                 flushPendingMessages()
             }
@@ -157,7 +165,7 @@ class WebSocketClient @Inject constructor(
                     sendMessageInternal(pending)
                 } else {
                     // Put back if disconnected again
-                    pendingMessages.offer(pending)
+                    enqueuePendingMessage(pending)
                     break
                 }
             }
@@ -320,10 +328,17 @@ class WebSocketClient @Inject constructor(
             sendMessageInternal(pending)
             true
         } else {
-            // Queue for later when reconnected
-            pendingMessages.offer(pending)
+            // Queue for later when reconnected (capped at 1000 items)
+            enqueuePendingMessage(pending)
             false
         }
+    }
+
+    private fun enqueuePendingMessage(pending: PendingMessage) {
+        while (pendingMessages.size >= 1000) {
+            pendingMessages.poll()
+        }
+        pendingMessages.offer(pending)
     }
     
     private fun sendMessageInternal(pending: PendingMessage) {

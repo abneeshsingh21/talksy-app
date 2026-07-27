@@ -23,6 +23,7 @@ class WebRTCClient @Inject constructor(
         )
     }
     
+    private var eglBase: EglBase? = null
     private var peerConnectionFactory: PeerConnectionFactory? = null
     private var peerConnection: PeerConnection? = null
     private var localAudioTrack: AudioTrack? = null
@@ -54,12 +55,15 @@ class WebRTCClient @Inject constructor(
             .createInitializationOptions()
         PeerConnectionFactory.initialize(options)
         
+        val egl = EglBase.create()
+        eglBase = egl
+
         val encoderFactory = DefaultVideoEncoderFactory(
-            EglBase.create().eglBaseContext,
+            egl.eglBaseContext,
             true,
             true
         )
-        val decoderFactory = DefaultVideoDecoderFactory(EglBase.create().eglBaseContext)
+        val decoderFactory = DefaultVideoDecoderFactory(egl.eglBaseContext)
         
         peerConnectionFactory = PeerConnectionFactory.builder()
             .setVideoEncoderFactory(encoderFactory)
@@ -148,8 +152,8 @@ class WebRTCClient @Inject constructor(
         videoCapturer = createCameraCapturer()
         
         videoCapturer?.let { capturer ->
-            val eglBase = EglBase.create()
-            surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", eglBase.eglBaseContext)
+            val eglContext = eglBase?.eglBaseContext ?: EglBase.create().also { eglBase = it }.eglBaseContext
+            surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", eglContext)
             
             localVideoSource = peerConnectionFactory?.createVideoSource(capturer.isScreencast)
             capturer.initialize(surfaceTextureHelper, context, localVideoSource?.capturerObserver)
@@ -294,6 +298,9 @@ class WebRTCClient @Inject constructor(
         
         peerConnectionFactory?.dispose()
         peerConnectionFactory = null
+        
+        eglBase?.release()
+        eglBase = null
         
         listener = null
     }
